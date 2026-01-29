@@ -1,6 +1,7 @@
 # Tidyverse para Pandas Users: Edición Sports Science
 
 Libro interactivo de Quarto para aprender **R/Tidyverse** orientado a **Sport Scientists** que ya conocen **Python/Pandas**.
+El libro es accesible desde: https://acastano149.github.io/tidyverse-book/
 
 ## 📖 Descripción
 
