@@ -1,0 +1,414 @@
+# Introducción: De DataFrames a Tibbles
+
+En Pandas, la unidad fundamental es el `DataFrame`. En el Tidyverse, es el `tibble`. Son muy similares, pero hay diferencias **críticas** que debes entender desde el día 1.
+
+```{webr-r}
+#| echo: true
+library(tidyverse)
+
+# ============================================
+# DATOS ENRIQUECIDOS PARA SPORT SCIENTISTS
+# ============================================
+# Dataset ATLETAS: Perfil físico completo del plantel
+atletas <- tibble(
+  JugadorID = sprintf("ATL_%03d", 1:15),
+  Nombre = c('García', 'López', 'Martínez', 'Sánchez', 'Fernández', 
+             'González', 'Rodríguez', 'Pérez', 'Gómez', 'Ruiz',
+             'Díaz', 'Moreno', 'Álvarez', 'Jiménez', 'Romero'),
+  Posicion = c('Delantero', 'Mediocentro', 'Defensa', 'Portero', 'Delantero',
+              'Mediocentro', 'Defensa', 'Delantero', 'Mediocentro', 'Defensa',
+              'Portero', 'Delantero', 'Mediocentro', 'Defensa', 'Extremo'),
+  Edad = c(25, 28, 23, 31, 22, 27, 29, 24, 26, 30, 33, 21, 25, 28, 23),
+  Altura_cm = c(178, 175, 182, 188, 176, 180, 185, 173, 177, 184, 190, 172, 179, 183, 175),
+  Peso_kg = c(75, 72, 80, 85, 70, 76, 82, 68, 74, 81, 87, 67, 73, 79, 71),
+  # Métricas fisiológicas
+  VO2max = c(58.5, 62.1, 55.0, 48.2, 60.5, 59.0, 54.5, 61.0, 57.5, 53.0, 46.0, 63.0, 58.0, 55.5, 59.5),
+  FC_Max = c(195, 188, 192, 185, 198, 190, 186, 196, 191, 184, 180, 200, 193, 187, 197),
+  FC_Reposo = c(52, 48, 55, 58, 50, 51, 54, 49, 53, 56, 60, 47, 52, 55, 50),
+  # Rendimiento físico
+  VelocidadMax_kmh = c(32.5, 31.0, 30.2, 28.5, 33.8, 31.5, 29.8, 34.2, 30.5, 29.0, 27.5, 35.0, 31.2, 29.5, 33.0),
+  Potencia_W = c(850, 780, 920, 950, 720, 810, 890, 700, 790, 880, 920, 680, 800, 860, 740),
+  SaltoCMJ_cm = c(42, 38, 45, 48, 40, 41, 44, 39, 40, 43, 46, 37, 41, 44, 39),
+  YoYo_IR1_m = c(2120, 2400, 1840, 1280, 2280, 2200, 1720, 2360, 2040, 1680, 1120, 2520, 2080, 1800, 2240),
+  # Composición corporal
+  Grasa_Corporal_pct = c(10.2, 9.8, 11.5, 13.2, 9.5, 10.0, 11.8, 9.2, 10.5, 12.0, 14.5, 8.8, 10.3, 11.2, 9.6)
+)
+
+# Dataset GPS: Sesiones de entrenamiento y partidos
+gps <- tibble(
+  JugadorID = rep(c('ATL_001', 'ATL_002', 'ATL_001', 'ATL_003', 'ATL_002', 
+                   'ATL_001', 'ATL_003', 'ATL_002', 'ATL_001', 'ATL_004'), 3),
+  TipoSesion = rep(c('Entrenamiento', 'Partido', 'Partido', 'Entrenamiento', 'Entrenamiento',
+                    'Entrenamiento', 'Partido', 'Partido', 'Partido', 'Entrenamiento'), 3),
+  Distancia_Total_m = rep(c(4500, 10200, 9800, 3200, 4100, 5600, 11500, 10800, 11000, 3000), 3),
+  HSR_m = rep(c(150, 800, 750, 50, 120, 300, 950, 880, 900, 20), 3),
+  Sprint_m = rep(c(45, 280, 250, 15, 35, 90, 320, 300, 310, 5), 3),
+  RPE = rep(c(3, 8, 9, 2, 4, 5, 10, 8, 9, 2), 3),
+  Duracion_min = rep(c(60, 95, 95, 45, 60, 75, 98, 96, 95, 40), 3),
+  HR_Media = rep(c(135, 165, 168, 125, 140, 145, 172, 167, 170, 120), 3),
+  Fecha = seq.Date(as.Date("2024-01-01"), by = "day", length.out = 30)
+)
+
+cat("✅ Datos cargados correctamente\n")
+cat("   atletas:", nrow(atletas), "filas x", ncol(atletas), "columnas\n")
+cat("   gps:", nrow(gps), "filas x", ncol(gps), "columnas\n")
+cat("\n📋 Variables de atletas:", paste(names(atletas)[1:6], collapse = ", "), "...\n")
+```
+
+***
+
+## 1. Vectores: El Tipo Básico de R
+
+En R, el vector es la estructura más básica. En Pandas, el equivalente es la **Series**: un array unidimensional con índice.
+
+### Ejemplo 1.1: Crear un vector desde valores
+
+**En Python (Pandas):**
+```python
+frecuencias_cardiacas = pd.Series([180, 175, 182, 168])
+```
+
+**En R:**
+```{webr-r}
+frecuencias_cardiacas <- c(180, 175, 182, 168)
+print(frecuencias_cardiacas)
+cat("\nTipo:", class(frecuencias_cardiacas), "\n")
+```
+
+**¿Por qué esto importa?** A diferencia de una Series de Pandas, un vector de R **no tiene índice visible**. Sin embargo, puedes acceder por posición (comenzando en 1, no en 0 como Python).
+
+---
+
+### 🧠 Práctica 1.1: Crea tu primer vector
+
+Crea un vector llamado `pesos` con los valores: 75.5, 82.3, 68.0, 90.1
+
+```{webr-r}
+# Pista 1: Usa c(...)
+# Pista 2: Los valores van separados por comas
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+pesos <- c(75.5, 82.3, 68.0, 90.1)
+print(pesos)
+```
+:::
+
+---
+
+### Ejemplo 1.2: Vectores con nombres
+
+**En Python (Pandas):**
+```python
+vo2max = pd.Series(
+    data=[58.5, 62.1, 55.0, 48.2],
+    index=['Jugador_A', 'Jugador_B', 'Jugador_C', 'Jugador_D'],
+    name='VO2max'
+)
+vo2max['Jugador_B']
+```
+
+**En R:**
+```{webr-r}
+vo2max <- c(Jugador_A = 58.5, Jugador_B = 62.1, Jugador_C = 55.0, Jugador_D = 48.2)
+print(vo2max)
+cat("\nAcceso por nombre:", vo2max["Jugador_B"], "\n")
+```
+
+**¿Por qué es poderoso?** Al darle nombres, el acceso es explícito. No necesitas recordar posiciones.
+
+---
+
+### 🧠 Práctica 1.2: Vector con nombres
+
+Crea un vector de RPE (escala 1-10) para 3 días: 'Lunes', 'Miércoles', 'Viernes', con valores 7, 8, 6. Accede al RPE del Miércoles.
+
+```{webr-r}
+# Pista 1: c(Nombre1 = valor1, Nombre2 = valor2, ...)
+# Pista 2: Accede con vector["nombre"]
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+rpe <- c(Lunes = 7, Miércoles = 8, Viernes = 6)
+print(rpe["Miércoles"])
+```
+:::
+
+---
+
+## 2. Tibble: La Tabla del Tidyverse
+
+El tibble es una versión mejorada del data.frame de R, similar al DataFrame de Pandas.
+
+### Ejemplo 2.1: Crear tibble desde vectores
+
+**En Python (Pandas):**
+```python
+atletas_mini = pd.DataFrame({
+    'Nombre': ['García', 'López', 'Martínez'],
+    'Posicion': ['Delantero', 'Mediocentro', 'Defensa'],
+    'Edad': [25, 28, 23]
+})
+```
+
+**En R (Tidyverse):**
+```{webr-r}
+atletas_mini <- tibble(
+  Nombre = c('García', 'López', 'Martínez'),
+  Posicion = c('Delantero', 'Mediocentro', 'Defensa'),
+  Edad = c(25, 28, 23)
+)
+atletas_mini
+```
+
+**¿Qué está pasando?** La función `tibble()` crea un data frame moderno. Los vectores se convierten en columnas.
+
+---
+
+### 🧠 Práctica 2.1: Tu primer tibble
+
+Crea un tibble de 3 sesiones de entrenamiento con columnas: 'Fecha', 'Tipo', 'Duracion_min'.
+
+```{webr-r}
+# Pista 1: tibble(col1 = c(...), col2 = c(...))
+# Pista 2: Cada columna es nombre = c(valores)
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+sesiones <- tibble(
+  Fecha = c('2024-01-15', '2024-01-17', '2024-01-19'),
+  Tipo = c('Fuerza', 'Técnico', 'Partido'),
+  Duracion_min = c(60, 90, 95)
+)
+print(sesiones)
+```
+:::
+
+---
+
+## 3. Exploración Rápida
+
+### Ejemplo 3.1: Atributos del tibble
+
+**En Python (Pandas):**
+```python
+atletas.shape
+atletas.columns.tolist()
+atletas.info()
+```
+
+**En R (Tidyverse):**
+```{webr-r}
+cat("Forma (filas, columnas):", dim(atletas), "\n")
+cat("\nColumnas:", names(atletas), "\n")
+cat("\nEstructura:\n")
+glimpse(atletas)
+```
+
+### Ejemplo 3.2: Estadísticas básicas
+
+```{webr-r}
+summary(atletas)
+```
+
+---
+
+## 4. El Índice: Diferencia Filosófica
+
+En Pandas, el índice es **fundamental**. En R, **no existe como concepto**. Esto cambia cómo buscamos datos.
+
+### Ejemplo 4.1: Filtrado como alternativa al índice
+
+En Pandas harías:
+```python
+atletas_idx = atletas.set_index('JugadorID')
+atletas_idx.loc['ATL_005'][['Nombre', 'VO2max']]
+```
+
+En R usamos `filter()`:
+```{webr-r}
+atletas %>%
+  filter(JugadorID == "ATL_005") %>%
+  select(Nombre, VO2max)
+```
+
+**¿Por qué importa?** R no tiene indexación O(1) como Pandas. Pero `filter()` es muy rápido y más legible.
+
+---
+
+### 🧠 Práctica 3.1: Trabajando sin índices
+
+Busca los datos del atleta 'López' usando `filter()`.
+
+```{webr-r}
+# Pista 1: atletas %>% filter(columna == "valor")
+# Pista 2: El operador %>% encadena operaciones
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  filter(Nombre == "López")
+```
+:::
+
+---
+
+## 5. Tibbles vs Data.frames: Diferencias Clave
+
+```{webr-r}
+# Tibble muestra solo las primeras filas y ajusta columnas
+print(atletas)
+
+# Data.frame tradicional muestra todo (puede ser muy largo)
+# as.data.frame(atletas)
+```
+
+**Ventajas del tibble:**
+
+- No convierte strings a factores automáticamente
+- Muestra tipo de cada columna
+- No muestra filas infinitas
+- Permite nombres de columna con espacios
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Perfil del Plantel
+
+Ahora que conoces las estructuras básicas, responde estas preguntas de análisis del plantel:
+
+### Pregunta 1: Dimensiones del Dataset
+¿Cuántos atletas hay en total y cuántas métricas físicas se han registrado?
+
+```{webr-r}
+# Pista: Usa dim() para ver (filas, columnas)
+
+# Tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+cat("Atletas:", nrow(atletas), "\n")
+cat("Métricas registradas:", ncol(atletas), "variables\n")
+cat("\nVariables disponibles:\n", names(atletas), "\n")
+```
+:::
+
+### Pregunta 2: ¿Quién es el atleta más rápido del plantel?
+Encuentra el jugador con mayor velocidad máxima y muestra su nombre, posición y velocidad.
+
+```{webr-r}
+# Pista: Usa which.max() para encontrar el índice del valor máximo
+
+# Tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  filter(VelocidadMax_kmh == max(VelocidadMax_kmh)) %>%
+  select(Nombre, Posicion, VelocidadMax_kmh)
+```
+:::
+
+### Pregunta 3: Reserva de Frecuencia Cardíaca
+La reserva de FC = FC_Max - FC_Reposo. ¿Cuál es la reserva media del plantel?
+
+```{webr-r}
+# Pista: Puedes restar dos columnas directamente
+
+# Tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+reserva_fc <- atletas$FC_Max - atletas$FC_Reposo
+cat("Reserva FC media:", round(mean(reserva_fc), 1), "ppm\n")
+cat("Rango:", min(reserva_fc), "-", max(reserva_fc), "ppm\n")
+```
+:::
+
+### Pregunta 4: Perfil por Posición
+¿Cuántos jugadores hay en cada posición? ¿Qué posición es más común?
+
+```{webr-r}
+# Pista: table() cuenta frecuencias, o usa count() del tidyverse
+
+# Tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  count(Posicion, sort = TRUE)
+```
+:::
+
+### Pregunta 5: Atletas en su Prime (25-29 años)
+¿Cuántos atletas están en su "prime" (entre 25 y 29 años)?
+
+```{webr-r}
+# Pista: Usa filter() con operadores lógicos &
+
+# Tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  filter(Edad >= 25 & Edad <= 29) %>%
+  select(Nombre, Edad, Posicion)
+```
+:::
+
+---
+
+## Resumen: Tabla de Equivalencias
+
+| Concepto | Python (Pandas) | R (Tidyverse) |
+|----------|-----------------|---------------|
+| Vector | `pd.Series([1, 2, 3])` | `c(1, 2, 3)` |
+| DataFrame | `pd.DataFrame({...})` | `tibble(...)` |
+| Ver estructura | `df.info()` | `glimpse(df)` |
+| Estadísticas | `df.describe()` | `summary(df)` |
+| Conteo | `df['col'].value_counts()` | `df %>% count(col)` |

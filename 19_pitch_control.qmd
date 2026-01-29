@@ -1,0 +1,204 @@
+# Pitch Control (Control del Campo)
+
+El **Pitch Control** modela qué equipo controla cada zona del campo en un momento dado, basándose en las posiciones y velocidades de los jugadores.
+
+```{webr-r}
+library(tidyverse)
+
+# Posiciones de jugadores en un frame de tracking
+set.seed(42)
+
+# Equipo Local (azul)
+equipo_local <- tibble(
+  Jugador = paste0("L", 1:11),
+  Equipo = "Local",
+  X = c(5, 25, 25, 35, 35, 45, 55, 55, 70, 70, 85),
+  Y = c(50, 30, 70, 15, 85, 50, 35, 65, 25, 75, 50),
+  Vx = rnorm(11, 0, 2),
+  Vy = rnorm(11, 0, 2)
+)
+
+# Equipo Visitante (rojo)
+equipo_visitante <- tibble(
+  Jugador = paste0("V", 1:11),
+  Equipo = "Visitante",
+  X = c(95, 80, 80, 65, 65, 55, 50, 50, 40, 40, 20),
+  Y = c(50, 30, 70, 20, 80, 50, 30, 70, 25, 75, 50),
+  Vx = rnorm(11, 0, 2),
+  Vy = rnorm(11, 0, 2)
+)
+
+jugadores <- bind_rows(equipo_local, equipo_visitante)
+
+# Posición del balón
+balon <- tibble(X = 55, Y = 50)
+
+cat("✅ Frame de tracking cargado\n")
+cat("   Jugadores:", nrow(jugadores), "\n")
+```
+
+***
+
+## 1. Modelo de Control Simple
+
+El modelo más simple asigna cada punto del campo al jugador más cercano.
+
+```{webr-r}
+# Función para calcular distancia
+distancia <- function(x1, y1, x2, y2) {
+  sqrt((x1 - x2)^2 + (y1 - y2)^2)
+}
+
+# Crear grid del campo
+grid <- expand.grid(
+  X = seq(0, 100, by = 2),
+  Y = seq(0, 100, by = 2)
+)
+
+# Para cada punto, encontrar el equipo más cercano
+control_grid <- grid %>%
+  rowwise() %>%
+  mutate(
+    dist_local = min(distancia(X, Y, equipo_local$X, equipo_local$Y)),
+    dist_visitante = min(distancia(X, Y, equipo_visitante$X, equipo_visitante$Y)),
+    Control = if_else(dist_local < dist_visitante, "Local", "Visitante")
+  ) %>%
+  ungroup()
+
+cat("Grid calculado:", nrow(control_grid), "puntos\n")
+```
+
+---
+
+***
+
+## 2. Visualizar Pitch Control
+
+```{webr-r}
+ggplot() +
+  # Control del campo
+  geom_tile(data = control_grid, aes(x = X, y = Y, fill = Control), alpha = 0.5) +
+  # Jugadores locales
+  geom_point(data = equipo_local, aes(x = X, y = Y), 
+             color = "blue", size = 4) +
+  # Jugadores visitantes
+  geom_point(data = equipo_visitante, aes(x = X, y = Y), 
+             color = "red", size = 4) +
+  # Balón
+  geom_point(data = balon, aes(x = X, y = Y), 
+             color = "white", fill = "black", shape = 21, size = 3) +
+  scale_fill_manual(values = c("Local" = "blue", "Visitante" = "red")) +
+  coord_fixed(xlim = c(0, 100), ylim = c(0, 100)) +
+  labs(title = "Pitch Control - Modelo de Cercanía") +
+  theme_minimal()
+```
+
+---
+
+***
+
+## 3. Modelo con Velocidad (Spearman)
+
+Un modelo más avanzado considera el tiempo que tarda cada jugador en llegar a cada punto.
+
+```{webr-r}
+# Tiempo de llegada (simplificado)
+tiempo_llegada <- function(x_jugador, y_jugador, vx, vy, x_punto, y_punto, velocidad = 5) {
+  # Distancia
+  d <- distancia(x_jugador, y_jugador, x_punto, y_punto)
+  # Tiempo base
+  t <- d / velocidad
+  # Ajuste por velocidad actual (si va en esa dirección)
+  t
+}
+
+# Recalcular con tiempos
+control_avanzado <- grid %>%
+  rowwise() %>%
+  mutate(
+    tiempo_local = min(sapply(1:11, function(i) {
+      tiempo_llegada(equipo_local$X[i], equipo_local$Y[i],
+                    equipo_local$Vx[i], equipo_local$Vy[i],
+                    X, Y)
+    })),
+    tiempo_visitante = min(sapply(1:11, function(i) {
+      tiempo_llegada(equipo_visitante$X[i], equipo_visitante$Y[i],
+                    equipo_visitante$Vx[i], equipo_visitante$Vy[i],
+                    X, Y)
+    })),
+    Control = if_else(tiempo_local < tiempo_visitante, "Local", "Visitante"),
+    Diferencia = tiempo_visitante - tiempo_local
+  ) %>%
+  ungroup()
+```
+
+### Visualización con gradiente
+
+```{webr-r}
+ggplot() +
+  geom_tile(data = control_avanzado, 
+            aes(x = X, y = Y, fill = Diferencia), alpha = 0.7) +
+  geom_point(data = equipo_local, aes(x = X, y = Y), 
+             color = "white", size = 4, shape = 16) +
+  geom_point(data = equipo_visitante, aes(x = X, y = Y), 
+             color = "black", size = 4, shape = 16) +
+  scale_fill_gradient2(low = "red", mid = "white", high = "blue", 
+                       midpoint = 0, name = "Control") +
+  coord_fixed(xlim = c(0, 100), ylim = c(0, 100)) +
+  labs(title = "Pitch Control - Modelo con Tiempo de Llegada",
+       subtitle = "Azul = Local, Rojo = Visitante") +
+  theme_minimal()
+```
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Análisis de Control
+
+### Pregunta 1: Porcentaje de Control
+¿Qué porcentaje del campo controla cada equipo?
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+control_grid %>%
+  count(Control) %>%
+  mutate(Porcentaje = n / sum(n) * 100)
+```
+:::
+
+### Pregunta 2: Control del Área
+¿Quién controla el área rival (X > 83)?
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+control_grid %>%
+  filter(X > 83) %>%
+  count(Control) %>%
+  mutate(Porcentaje = n / sum(n) * 100)
+```
+:::
+
+---
+
+## Resumen
+
+| Modelo | Descripción |
+|--------|-------------|
+| Cercanía | Controla el más cercano |
+| Tiempo | Controla el que llega antes |
+| Probabilístico | Asigna probabilidad de control |

@@ -1,0 +1,181 @@
+# Manejo de Datos Faltantes
+
+Este capítulo traduce `.isna()`, `.fillna()`, `.dropna()` de pandas a las funciones equivalentes en R/tidyverse.
+
+```{webr-r}
+library(tidyverse)
+
+# Dataset con valores faltantes
+bienestar <- tibble(
+  JugadorID = sprintf("ATL_%03d", 1:10),
+  Nombre = c('García', 'López', 'Martínez', 'Sánchez', 'Fernández',
+             'González', 'Rodríguez', 'Pérez', 'Gómez', 'Ruiz'),
+  Sueno_h = c(7, NA, 8, 6, 7, NA, 8, 7, NA, 6),
+  Fatiga = c(3, 4, NA, 5, 3, 4, NA, 3, 4, NA),
+  HRV = c(65, 58, 72, NA, 68, 55, 70, NA, 62, 59),
+  RPE = c(5, 6, 4, 7, NA, 6, 5, 6, 7, 5)
+)
+
+cat("✅ Datos cargados con valores faltantes\n")
+print(bienestar)
+```
+
+***
+
+## 1. Identificar Valores Faltantes
+
+### Ejemplo 1.1: Detectar NA
+
+**En Python:** `df.isna()`
+
+**En R:**
+```{webr-r}
+# ¿Hay NA en cada columna?
+bienestar %>%
+  summarise(across(everything(), ~sum(is.na(.))))
+```
+
+### Ejemplo 1.2: Filas con algún NA
+
+```{webr-r}
+# Filas incompletas
+bienestar %>%
+  filter(if_any(everything(), is.na))
+```
+
+---
+
+***
+
+## 2. Eliminar Filas con NA
+
+### Ejemplo 2.1: drop_na()
+
+**En Python:** `df.dropna()`
+
+**En R:**
+```{webr-r}
+# Eliminar filas con cualquier NA
+bienestar %>%
+  drop_na()
+```
+
+### Ejemplo 2.2: Eliminar NA solo en columnas específicas
+
+```{webr-r}
+# Solo eliminar si Sueno_h es NA
+bienestar %>%
+  drop_na(Sueno_h)
+```
+
+---
+
+***
+
+## 3. Reemplazar Valores Faltantes
+
+### Ejemplo 3.1: replace_na()
+
+**En Python:** `df.fillna(valor)`
+
+**En R:**
+```{webr-r}
+bienestar %>%
+  mutate(
+    Sueno_h = replace_na(Sueno_h, 7),  # Reemplazar con media típica
+    Fatiga = replace_na(Fatiga, 4)
+  )
+```
+
+### Ejemplo 3.2: Reemplazar con la media
+
+```{webr-r}
+bienestar %>%
+  mutate(
+    Sueno_h = if_else(is.na(Sueno_h), mean(Sueno_h, na.rm = TRUE), Sueno_h),
+    HRV = if_else(is.na(HRV), mean(HRV, na.rm = TRUE), HRV)
+  )
+```
+
+### Ejemplo 3.3: coalesce() para valores por defecto
+
+```{webr-r}
+bienestar %>%
+  mutate(
+    RPE = coalesce(RPE, 5)  # Si es NA, usar 5
+  )
+```
+
+---
+
+***
+
+## 4. Imputación Avanzada
+
+### Ejemplo 4.1: Imputar con la media del grupo
+
+```{webr-r}
+# Añadir posición para ejemplo
+bienestar_pos <- bienestar %>%
+  mutate(Posicion = rep(c("Delantero", "Defensa"), 5))
+
+bienestar_pos %>%
+  group_by(Posicion) %>%
+  mutate(
+    Sueno_h = if_else(is.na(Sueno_h), mean(Sueno_h, na.rm = TRUE), Sueno_h)
+  ) %>%
+  ungroup()
+```
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Limpieza de Datos
+
+### Pregunta 1: Resumen de Completitud
+Calcula el porcentaje de datos completos por columna.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+bienestar %>%
+  summarise(across(everything(), ~100 * sum(!is.na(.)) / n())) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "Pct_Completo")
+```
+:::
+
+### Pregunta 2: Dataset Limpio
+Crea una versión del dataset donde todos los NA se reemplacen con la mediana de cada columna.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+bienestar %>%
+  mutate(across(where(is.numeric), ~if_else(is.na(.), median(., na.rm = TRUE), .)))
+```
+:::
+
+---
+
+## Resumen
+
+| Operación | Python (Pandas) | R (Tidyverse) |
+|-----------|-----------------|---------------|
+| Detectar NA | `.isna()` | `is.na()` |
+| Contar NA | `.isna().sum()` | `sum(is.na())` |
+| Eliminar NA | `.dropna()` | `drop_na()` |
+| Reemplazar NA | `.fillna(valor)` | `replace_na(col, valor)` |
+| Valor por defecto | `coalesce` (NumPy) | `coalesce()` |

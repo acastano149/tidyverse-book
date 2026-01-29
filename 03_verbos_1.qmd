@@ -1,0 +1,296 @@
+# Verbos Básicos I: Selección, Filtrado y Ordenación
+
+Este capítulo traduce `.query()`, `df[['col']]`, `.sort_values()` de pandas a `filter()`, `select()`, `arrange()` de dplyr.
+
+```{webr-r}
+library(tidyverse)
+
+# ============================================
+# DATOS ENRIQUECIDOS PARA SPORT SCIENTISTS
+# ============================================
+atletas <- tibble(
+  JugadorID = sprintf("ATL_%03d", 1:15),
+  Nombre = c('García', 'López', 'Martínez', 'Sánchez', 'Fernández', 
+             'González', 'Rodríguez', 'Pérez', 'Gómez', 'Ruiz',
+             'Díaz', 'Moreno', 'Álvarez', 'Jiménez', 'Romero'),
+  Posicion = c('Delantero', 'Mediocentro', 'Defensa', 'Portero', 'Delantero',
+              'Mediocentro', 'Defensa', 'Delantero', 'Mediocentro', 'Defensa',
+              'Portero', 'Delantero', 'Mediocentro', 'Defensa', 'Extremo'),
+  Edad = c(25, 28, 23, 31, 22, 27, 29, 24, 26, 30, 33, 21, 25, 28, 23),
+  Altura_cm = c(178, 175, 182, 188, 176, 180, 185, 173, 177, 184, 190, 172, 179, 183, 175),
+  Peso_kg = c(75, 72, 80, 85, 70, 76, 82, 68, 74, 81, 87, 67, 73, 79, 71),
+  VO2max = c(58.5, 62.1, 55.0, 48.2, 60.5, 59.0, 54.5, 61.0, 57.5, 53.0, 46.0, 63.0, 58.0, 55.5, 59.5),
+  VelocidadMax_kmh = c(32.5, 31.0, 30.2, 28.5, 33.8, 31.5, 29.8, 34.2, 30.5, 29.0, 27.5, 35.0, 31.2, 29.5, 33.0),
+  YoYo_IR1_m = c(2120, 2400, 1840, 1280, 2280, 2200, 1720, 2360, 2040, 1680, 1120, 2520, 2080, 1800, 2240)
+)
+
+cat("✅ Datos cargados:", nrow(atletas), "filas x", ncol(atletas), "columnas\n")
+```
+
+***
+
+## 1. Selección de Columnas
+
+### Ejemplo 1.1: Selección por nombre
+
+**En Python:** `atletas[['Nombre', 'Posicion', 'VO2max']]`
+
+**En R:**
+```{webr-r}
+atletas %>%
+  select(Nombre, Posicion, VO2max) %>%
+  head()
+```
+
+**¿Por qué sin comillas?** En tidyverse usamos **non-standard evaluation (NSE)** - los nombres de columna se escriben directamente sin comillas.
+
+---
+
+### Ejemplo 1.2: Helpers de selección
+
+```{webr-r}
+# Columnas que empiezan con...
+atletas %>% select(starts_with("Vel")) %>% head()
+```
+
+```{webr-r}
+# Columnas que contienen...
+atletas %>% select(contains("max")) %>% head()
+```
+
+```{webr-r}
+# Rango de columnas
+atletas %>% select(Nombre:Edad) %>% head()
+```
+
+---
+
+### 🧠 Práctica 1.1
+
+Selecciona las columnas 'JugadorID', 'VelocidadMax_kmh' y 'YoYo_IR1_m'. Muestra las primeras 5 filas.
+
+```{webr-r}
+# Pista: select(col1, col2, col3) %>% head()
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  select(JugadorID, VelocidadMax_kmh, YoYo_IR1_m) %>%
+  head(5)
+```
+:::
+
+***
+
+## 2. Filtrado de Filas
+
+### Ejemplo 2.1: Filtro simple
+
+**En Python:** `atletas.query("Edad > 25")`
+
+**En R:**
+```{webr-r}
+atletas %>%
+  filter(Edad > 25) %>%
+  head()
+```
+
+### Ejemplo 2.2: Múltiples condiciones
+
+**En Python:** `atletas.query("Edad > 25 and Posicion == 'Delantero'")`
+
+**En R:**
+```{webr-r}
+atletas %>%
+  filter(Edad > 25, Posicion == "Delantero")
+```
+
+::: callout-note
+En `filter()`, las comas actúan como **AND**. Para **OR** usa el operador `|`.
+:::
+
+### Ejemplo 2.3: Valores en lista
+
+**En Python:** `atletas.query("Posicion in ['Portero', 'Defensa']")`
+
+**En R:**
+```{webr-r}
+atletas %>%
+  filter(Posicion %in% c("Portero", "Defensa")) %>%
+  head()
+```
+
+---
+
+### 🧠 Práctica 2.1
+
+Filtra atletas con VO2max > 55 Y Edad < 28.
+
+```{webr-r}
+# Pista: filter(cond1, cond2) o filter(cond1 & cond2)
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  filter(VO2max > 55, Edad < 28)
+```
+:::
+
+***
+
+## 3. Ordenación
+
+### Ejemplo 3.1: Orden descendente
+
+**En Python:** `atletas.sort_values('VO2max', ascending=False)`
+
+**En R:**
+```{webr-r}
+atletas %>%
+  arrange(desc(VO2max)) %>%
+  head()
+```
+
+### Ejemplo 3.2: Ordenar por múltiples columnas
+
+```{webr-r}
+atletas %>%
+  arrange(Posicion, desc(VO2max)) %>%
+  head(10)
+```
+
+### Ejemplo 3.3: Top N
+
+**En Python:** `atletas.nlargest(5, 'VelocidadMax_kmh')`
+
+**En R:**
+```{webr-r}
+atletas %>%
+  slice_max(VelocidadMax_kmh, n = 5) %>%
+  select(Nombre, Posicion, VelocidadMax_kmh)
+```
+
+---
+
+### 🧠 Práctica 3.1
+
+Muestra los 3 atletas con mejor resultado en el YoYo IR1 (mayor distancia).
+
+```{webr-r}
+# Pista: slice_max(columna, n = 3)
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  slice_max(YoYo_IR1_m, n = 3) %>%
+  select(Nombre, Posicion, YoYo_IR1_m)
+```
+:::
+
+***
+
+## 🏆 Mini-Proyecto: Análisis del Plantel por Perfiles Físicos
+
+Responde estas preguntas sobre el dataset `atletas`:
+
+### Pregunta 1: Velocistas del Equipo
+¿Qué jugadores superan los 33 km/h de velocidad máxima? Muestra nombre, posición y velocidad.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  filter(VelocidadMax_kmh > 33) %>%
+  select(Nombre, Posicion, VelocidadMax_kmh)
+```
+:::
+
+### Pregunta 2: Resistencia Aeróbica por Posición
+¿Quiénes son los centrocampistas con VO2max superior a 57? Son los que más corren.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  filter(Posicion == "Mediocentro", VO2max > 57) %>%
+  select(Nombre, VO2max, YoYo_IR1_m)
+```
+:::
+
+### Pregunta 3: Delanteros Jóvenes y Rápidos
+Filtra delanteros menores de 25 años y ordénalos por velocidad máxima (descendente).
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  filter(Posicion == "Delantero", Edad < 25) %>%
+  arrange(desc(VelocidadMax_kmh)) %>%
+  select(Nombre, Edad, VelocidadMax_kmh)
+```
+:::
+
+### Pregunta 4: Top 5 en Test YoYo
+¿Quiénes son los 5 atletas con mejor rendimiento en el YoYo IR1? Incluye la posición para ver si hay un patrón.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  slice_max(YoYo_IR1_m, n = 5) %>%
+  select(Nombre, Posicion, YoYo_IR1_m, VO2max)
+```
+:::
+
+---
+
+## Resumen
+
+| Operación | Python (Pandas) | R (Tidyverse) |
+|-----------|-----------------|---------------|
+| Seleccionar | `df[['col1', 'col2']]` | `select(col1, col2)` |
+| Filtrar | `.query("cond")` | `filter(cond)` |
+| Ordenar desc | `.sort_values('col', ascending=False)` | `arrange(desc(col))` |
+| Top N | `.nlargest(5, 'col')` | `slice_max(col, n=5)` |

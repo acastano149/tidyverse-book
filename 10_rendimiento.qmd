@@ -1,0 +1,142 @@
+# Rendimiento y Optimización
+
+Este capítulo cubre técnicas para trabajar eficientemente con datos grandes en R.
+
+```{webr-r}
+library(tidyverse)
+
+# Simular dataset grande
+set.seed(42)
+n <- 10000
+
+gps_grande <- tibble(
+  JugadorID = sample(sprintf("ATL_%03d", 1:50), n, replace = TRUE),
+  Fecha = sample(seq.Date(as.Date("2023-01-01"), as.Date("2024-12-31"), by = "day"), n, replace = TRUE),
+  Distancia = rnorm(n, 8000, 2000),
+  HSR = rnorm(n, 500, 150),
+  Sprints = rpois(n, 15),
+  RPE = sample(1:10, n, replace = TRUE)
+)
+
+cat("✅ Dataset grande creado:", nrow(gps_grande), "filas\n")
+```
+
+***
+
+## 1. Vectorización vs Loops
+
+### Ejemplo 1.1: Evitar loops
+
+**❌ Lento (loop):**
+```r
+# NO hacer esto
+for (i in 1:nrow(gps_grande)) {
+  gps_grande$HSR_pct[i] <- gps_grande$HSR[i] / gps_grande$Distancia[i] * 100
+}
+```
+
+**✅ Rápido (vectorizado):**
+```{webr-r}
+gps_grande <- gps_grande %>%
+  mutate(HSR_pct = HSR / Distancia * 100)
+
+head(gps_grande)
+```
+
+---
+
+## 2. Operaciones Eficientes
+
+### Ejemplo 2.1: across() para múltiples columnas
+
+```{webr-r}
+# Aplicar función a varias columnas a la vez
+gps_grande %>%
+  summarise(across(c(Distancia, HSR, Sprints), 
+                   list(media = mean, sd = sd)))
+```
+
+### Ejemplo 2.2: Filtrar antes de operar
+
+```{webr-r}
+# Primero filtrar, luego calcular (más eficiente)
+gps_grande %>%
+  filter(RPE >= 7) %>%  # Reducir datos primero
+  group_by(JugadorID) %>%
+  summarise(Distancia_alta_carga = mean(Distancia)) %>%
+  head()
+```
+
+---
+
+## 3. data.table para Big Data
+
+Para datasets muy grandes (millones de filas), `data.table` es más rápido que dplyr.
+
+::: callout-note
+## Comparación de Sintaxis
+| dplyr | data.table |
+|-------|-----------|
+| `filter(x > 5)` | `[x > 5]` |
+| `select(a, b)` | `[, .(a, b)]` |
+| `mutate(c = a+b)` | `[, c := a+b]` |
+| `group_by() %>% summarise()` | `[, .(mean = mean(x)), by = y]` |
+:::
+
+---
+
+## 4. Medición de Tiempo
+
+```{webr-r}
+# Medir tiempo de ejecución
+system.time({
+  resultado <- gps_grande %>%
+    group_by(JugadorID) %>%
+    summarise(
+      n_sesiones = n(),
+      dist_total = sum(Distancia),
+      hsr_media = mean(HSR)
+    )
+})
+```
+
+---
+
+## 🏆 Mini-Proyecto: Optimización
+
+### Pregunta 1: Agregación Eficiente
+Calcula estadísticas por jugador y mes de forma eficiente.
+
+```{webr-r}
+# Pista: Crea columna de mes, luego agrupa
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+gps_grande %>%
+  mutate(Mes = lubridate::month(Fecha)) %>%
+  group_by(JugadorID, Mes) %>%
+  summarise(
+    Sesiones = n(),
+    Dist_media = mean(Distancia),
+    .groups = "drop"
+  ) %>%
+  head(10)
+```
+:::
+
+---
+
+## Resumen
+
+| Práctica | Recomendación |
+|----------|---------------|
+| Loops | Evitar, usar vectorización |
+| Múltiples operaciones | `across()` |
+| Datos grandes | Filtrar temprano, usar `data.table` |
+| Medir rendimiento | `system.time()` |

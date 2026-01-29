@@ -1,0 +1,209 @@
+# Simulación de Partidos
+
+Este capítulo enseña a simular resultados de partidos usando modelos estadísticos.
+
+```{webr-r}
+library(tidyverse)
+
+# Datos de equipos (goles esperados por partido)
+equipos <- tibble(
+  Equipo = c("Real Madrid", "Barcelona", "Atlético", "Sevilla", "Valencia"),
+  xG_ataque = c(2.1, 2.0, 1.5, 1.4, 1.3),  # Goles esperados a favor
+  xG_defensa = c(0.8, 1.0, 0.7, 1.1, 1.2)   # Goles esperados en contra (base)
+)
+
+cat("✅ Datos de equipos cargados\n")
+print(equipos)
+```
+
+***
+
+## 1. Distribución de Poisson para Goles
+
+Los goles en fútbol siguen aproximadamente una distribución de Poisson.
+
+```{webr-r}
+# Probabilidad de marcar 0, 1, 2, 3... goles con lambda = 1.5
+lambda <- 1.5
+goles <- 0:6
+
+probs <- tibble(
+  Goles = goles,
+  Probabilidad = dpois(goles, lambda)
+)
+
+ggplot(probs, aes(x = factor(Goles), y = Probabilidad)) +
+  geom_col(fill = "steelblue") +
+  labs(title = paste("Distribución de Goles (λ =", lambda, ")"),
+       x = "Goles", y = "Probabilidad") +
+  theme_minimal()
+```
+
+---
+
+***
+
+## 2. Simular un Partido
+
+```{webr-r}
+simular_partido <- function(xG_local, xG_visitante, n_sims = 10000) {
+  # Simular goles usando Poisson
+  goles_local <- rpois(n_sims, xG_local)
+  goles_visitante <- rpois(n_sims, xG_visitante)
+  
+  # Calcular resultados
+  victorias_local <- sum(goles_local > goles_visitante)
+  empates <- sum(goles_local == goles_visitante)
+  victorias_visitante <- sum(goles_local < goles_visitante)
+  
+  tibble(
+    Resultado = c("Victoria Local", "Empate", "Victoria Visitante"),
+    Probabilidad = c(victorias_local, empates, victorias_visitante) / n_sims * 100
+  )
+}
+
+# Ejemplo: Real Madrid vs Barcelona
+resultado <- simular_partido(xG_local = 2.1, xG_visitante = 2.0)
+print(resultado)
+```
+
+---
+
+***
+
+## 3. Matriz de Resultados
+
+```{webr-r}
+matriz_resultados <- function(xG_local, xG_visitante, max_goles = 5) {
+  expand.grid(Local = 0:max_goles, Visitante = 0:max_goles) %>%
+    as_tibble() %>%
+    mutate(
+      Probabilidad = dpois(Local, xG_local) * dpois(Visitante, xG_visitante)
+    )
+}
+
+# Real Madrid vs Barcelona
+matriz <- matriz_resultados(2.1, 2.0)
+
+ggplot(matriz, aes(x = factor(Local), y = factor(Visitante), fill = Probabilidad)) +
+  geom_tile() +
+  geom_text(aes(label = sprintf("%.1f%%", Probabilidad * 100)), size = 3) +
+  scale_fill_gradient(low = "white", high = "darkgreen") +
+  labs(title = "Probabilidad de cada Resultado",
+       subtitle = "Real Madrid (Local) vs Barcelona (Visitante)",
+       x = "Goles Real Madrid", y = "Goles Barcelona") +
+  theme_minimal()
+```
+
+---
+
+***
+
+## 4. Simulación Monte Carlo de Liga
+
+```{webr-r}
+# Simular todos los partidos de una jornada
+simular_jornada <- function(partidos, n_sims = 1000) {
+  resultados <- map_dfr(1:nrow(partidos), function(i) {
+    partido <- partidos[i,]
+    
+    goles_local <- rpois(n_sims, partido$xG_local)
+    goles_visitante <- rpois(n_sims, partido$xG_visitante)
+    
+    tibble(
+      Partido = paste(partido$Local, "vs", partido$Visitante),
+      Sim = 1:n_sims,
+      Goles_Local = goles_local,
+      Goles_Visitante = goles_visitante,
+      Puntos_Local = case_when(
+        goles_local > goles_visitante ~ 3,
+        goles_local == goles_visitante ~ 1,
+        TRUE ~ 0
+      ),
+      Puntos_Visitante = case_when(
+        goles_visitante > goles_local ~ 3,
+        goles_local == goles_visitante ~ 1,
+        TRUE ~ 0
+      )
+    )
+  })
+  
+  resultados
+}
+
+# Crear jornada de ejemplo
+jornada <- tibble(
+  Local = c("Real Madrid", "Atlético"),
+  Visitante = c("Barcelona", "Sevilla"),
+  xG_local = c(2.1, 1.5),
+  xG_visitante = c(2.0, 1.4)
+)
+
+sims <- simular_jornada(jornada)
+
+# Resumen por partido
+sims %>%
+  group_by(Partido) %>%
+  summarise(
+    Prob_Local = mean(Goles_Local > Goles_Visitante) * 100,
+    Prob_Empate = mean(Goles_Local == Goles_Visitante) * 100,
+    Prob_Visitante = mean(Goles_Local < Goles_Visitante) * 100
+  )
+```
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Predicción de Partido
+
+### Pregunta 1: Resultado Más Probable
+¿Cuál es el resultado exacto más probable en un partido con xG 1.5 vs 1.0?
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+matriz_resultados(1.5, 1.0) %>%
+  arrange(desc(Probabilidad)) %>%
+  head(5)
+```
+:::
+
+### Pregunta 2: Over/Under 2.5
+¿Cuál es la probabilidad de que haya más de 2.5 goles en total?
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+matriz <- matriz_resultados(1.5, 1.0)
+
+matriz %>%
+  mutate(Total = Local + Visitante) %>%
+  summarise(
+    Under_2_5 = sum(Probabilidad[Total <= 2]) * 100,
+    Over_2_5 = sum(Probabilidad[Total >= 3]) * 100
+  )
+```
+:::
+
+---
+
+## Resumen
+
+| Método | Uso |
+|--------|-----|
+| Poisson | Modelar número de goles |
+| Monte Carlo | Simular muchos partidos |
+| Matriz de resultados | Probabilidad de cada marcador |

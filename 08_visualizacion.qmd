@@ -1,0 +1,225 @@
+# Visualización con ggplot2
+
+Este capítulo traduce matplotlib/plotnine de Python a ggplot2 de R — la gramática de gráficos.
+
+```{webr-r}
+library(tidyverse)
+
+atletas <- tibble(
+  Nombre = c('García', 'López', 'Martínez', 'Sánchez', 'Fernández', 
+             'González', 'Rodríguez', 'Pérez', 'Gómez', 'Ruiz'),
+  Posicion = c('Delantero', 'Mediocentro', 'Defensa', 'Portero', 'Delantero',
+              'Mediocentro', 'Defensa', 'Delantero', 'Mediocentro', 'Defensa'),
+  Edad = c(25, 28, 23, 31, 22, 27, 29, 24, 26, 30),
+  VO2max = c(58.5, 62.1, 55.0, 48.2, 60.5, 59.0, 54.5, 61.0, 57.5, 53.0),
+  VelocidadMax = c(32.5, 31.0, 30.2, 28.5, 33.8, 31.5, 29.8, 34.2, 30.5, 29.0),
+  Peso_kg = c(75, 72, 80, 85, 70, 76, 82, 68, 74, 81)
+)
+
+gps_semanal <- tibble(
+  Semana = rep(1:8, 3),
+  Jugador = rep(c('García', 'López', 'Martínez'), each = 8),
+  Distancia = c(42, 45, 38, 52, 48, 44, 55, 51,  # García
+               38, 42, 35, 48, 45, 40, 50, 47,  # López
+               35, 38, 32, 45, 42, 38, 48, 44)  # Martínez
+) %>% mutate(Distancia = Distancia * 1000)
+
+cat("✅ Datos cargados\n")
+```
+
+***
+
+## 1. La Gramática de Gráficos
+
+ggplot2 construye gráficos en **capas**:
+
+1. **Data**: El tibble con los datos
+2. **Aesthetics (aes)**: Mapeo de variables a propiedades visuales
+3. **Geometries (geom)**: El tipo de gráfico
+4. **Facets**: Subgráficos
+5. **Theme**: Estilo visual
+
+### Ejemplo 1.1: Scatter plot básico
+
+**En Python (matplotlib):**
+```python
+plt.scatter(atletas['VO2max'], atletas['VelocidadMax'])
+```
+
+**En R (ggplot2):**
+```{webr-r}
+ggplot(atletas, aes(x = VO2max, y = VelocidadMax)) +
+  geom_point()
+```
+
+---
+
+### Ejemplo 1.2: Añadir color y tamaño
+
+```{webr-r}
+ggplot(atletas, aes(x = VO2max, y = VelocidadMax, color = Posicion, size = Peso_kg)) +
+  geom_point(alpha = 0.7) +
+  labs(title = "Relación VO2max - Velocidad",
+       x = "VO2max (ml/kg/min)",
+       y = "Velocidad máxima (km/h)")
+```
+
+---
+
+### 🧠 Práctica 1.1
+
+Crea un scatter de Edad vs VO2max, coloreando por Posición.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+ggplot(atletas, aes(x = Edad, y = VO2max, color = Posicion)) +
+  geom_point(size = 3) +
+  labs(title = "Edad vs VO2max por Posición")
+```
+:::
+
+***
+
+## 2. Tipos de Gráficos (Geometrías)
+
+### Ejemplo 2.1: Gráfico de barras
+
+```{webr-r}
+atletas %>%
+  count(Posicion) %>%
+  ggplot(aes(x = Posicion, y = n, fill = Posicion)) +
+  geom_col() +
+  labs(title = "Distribución por Posición", y = "Número de Jugadores")
+```
+
+### Ejemplo 2.2: Gráfico de líneas
+
+```{webr-r}
+ggplot(gps_semanal, aes(x = Semana, y = Distancia, color = Jugador)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(title = "Distancia Semanal", y = "Distancia (m)")
+```
+
+### Ejemplo 2.3: Boxplot
+
+```{webr-r}
+ggplot(atletas, aes(x = Posicion, y = VO2max, fill = Posicion)) +
+  geom_boxplot() +
+  labs(title = "VO2max por Posición")
+```
+
+### Ejemplo 2.4: Histograma
+
+```{webr-r}
+ggplot(atletas, aes(x = VO2max)) +
+  geom_histogram(bins = 5, fill = "steelblue", color = "white") +
+  labs(title = "Distribución de VO2max")
+```
+
+---
+
+***
+
+## 3. Facetas: Subgráficos
+
+### Ejemplo 3.1: facet_wrap
+
+```{webr-r}
+ggplot(gps_semanal, aes(x = Semana, y = Distancia)) +
+  geom_line(color = "steelblue") +
+  geom_point() +
+  facet_wrap(~Jugador) +
+  labs(title = "Distancia por Jugador")
+```
+
+---
+
+***
+
+## 4. Temas y Personalización
+
+```{webr-r}
+ggplot(atletas, aes(x = VO2max, y = VelocidadMax, color = Posicion)) +
+  geom_point(size = 4) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    legend.position = "bottom"
+  ) +
+  labs(
+    title = "Perfil Físico del Plantel",
+    subtitle = "Relación entre capacidad aeróbica y velocidad",
+    x = "VO2max (ml/kg/min)",
+    y = "Velocidad máxima (km/h)"
+  )
+```
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Dashboard Visual
+
+### Pregunta 1: Ranking de VO2max
+Crea un gráfico de barras horizontal con los atletas ordenados por VO2max.
+
+```{webr-r}
+# Pista: reorder(Nombre, VO2max) para ordenar
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  ggplot(aes(x = reorder(Nombre, VO2max), y = VO2max, fill = Posicion)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Ranking de VO2max", x = "", y = "VO2max")
+```
+:::
+
+### Pregunta 2: Evolución con Tendencia
+Añade una línea de tendencia al gráfico de distancia semanal.
+
+```{webr-r}
+# Pista: geom_smooth()
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+ggplot(gps_semanal, aes(x = Semana, y = Distancia, color = Jugador)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Tendencia de Distancia Semanal")
+```
+:::
+
+---
+
+## Resumen
+
+| Elemento | Python (matplotlib) | R (ggplot2) |
+|----------|---------------------|-------------|
+| Datos | `plt.plot(x, y)` | `ggplot(data, aes(x, y))` |
+| Scatter | `plt.scatter()` | `geom_point()` |
+| Línea | `plt.plot()` | `geom_line()` |
+| Barras | `plt.bar()` | `geom_col()` |
+| Boxplot | `plt.boxplot()` | `geom_boxplot()` |
+| Subplots | `plt.subplot()` | `facet_wrap()` |

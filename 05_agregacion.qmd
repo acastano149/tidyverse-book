@@ -1,0 +1,278 @@
+# Agregación: group_by y summarise
+
+Este capítulo traduce `.groupby().agg()` de pandas a `group_by() %>% summarise()` de dplyr.
+
+```{webr-r}
+library(tidyverse)
+
+atletas <- tibble(
+  JugadorID = sprintf("ATL_%03d", 1:15),
+  Nombre = c('García', 'López', 'Martínez', 'Sánchez', 'Fernández', 
+             'González', 'Rodríguez', 'Pérez', 'Gómez', 'Ruiz',
+             'Díaz', 'Moreno', 'Álvarez', 'Jiménez', 'Romero'),
+  Posicion = c('Delantero', 'Mediocentro', 'Defensa', 'Portero', 'Delantero',
+              'Mediocentro', 'Defensa', 'Delantero', 'Mediocentro', 'Defensa',
+              'Portero', 'Delantero', 'Mediocentro', 'Defensa', 'Extremo'),
+  Edad = c(25, 28, 23, 31, 22, 27, 29, 24, 26, 30, 33, 21, 25, 28, 23),
+  VO2max = c(58.5, 62.1, 55.0, 48.2, 60.5, 59.0, 54.5, 61.0, 57.5, 53.0, 46.0, 63.0, 58.0, 55.5, 59.5),
+  VelocidadMax_kmh = c(32.5, 31.0, 30.2, 28.5, 33.8, 31.5, 29.8, 34.2, 30.5, 29.0, 27.5, 35.0, 31.2, 29.5, 33.0),
+  YoYo_IR1_m = c(2120, 2400, 1840, 1280, 2280, 2200, 1720, 2360, 2040, 1680, 1120, 2520, 2080, 1800, 2240)
+)
+
+# Dataset GPS más grande
+gps <- tibble(
+  JugadorID = rep(c('ATL_001', 'ATL_002', 'ATL_003', 'ATL_004', 'ATL_005'), 6),
+  Nombre = rep(c('García', 'López', 'Martínez', 'Sánchez', 'Fernández'), 6),
+  TipoSesion = rep(c('Entrenamiento', 'Partido'), each = 15),
+  Distancia_Total_m = c(4500, 4200, 3800, 3200, 4100, 5600, 5200, 4800, 3500, 5100,
+                       4800, 4500, 4000, 3400, 4300, 10200, 9800, 8500, 7200, 10500,
+                       11000, 10800, 9200, 7800, 11200, 10500, 10200, 8800, 7500, 10800),
+  HSR_m = c(150, 120, 80, 30, 180, 300, 280, 200, 50, 320, 180, 150, 100, 40, 200,
+           800, 750, 500, 200, 850, 900, 880, 600, 250, 920, 850, 820, 550, 220, 880),
+  RPE = c(3, 4, 3, 2, 4, 5, 5, 4, 2, 5, 4, 4, 3, 2, 4, 8, 9, 7, 6, 8, 9, 8, 7, 6, 9, 8, 9, 7, 6, 8)
+)
+
+cat("✅ Datos cargados\n")
+cat("   atletas:", nrow(atletas), "filas\n")
+cat("   gps:", nrow(gps), "filas\n")
+```
+
+***
+
+## 1. Agregación Simple
+
+### Ejemplo 1.1: Media por grupo
+
+**En Python:**
+```python
+atletas.groupby('Posicion')['VO2max'].mean()
+```
+
+**En R:**
+```{webr-r}
+atletas %>%
+  group_by(Posicion) %>%
+  summarise(VO2max_medio = mean(VO2max))
+```
+
+### Ejemplo 1.2: Múltiples estadísticas
+
+**En Python:**
+```python
+atletas.groupby('Posicion').agg({
+    'VO2max': ['mean', 'std'],
+    'VelocidadMax_kmh': 'max'
+})
+```
+
+**En R:**
+```{webr-r}
+atletas %>%
+  group_by(Posicion) %>%
+  summarise(
+    VO2max_media = mean(VO2max),
+    VO2max_sd = sd(VO2max),
+    Velocidad_max = max(VelocidadMax_kmh),
+    n_jugadores = n()
+  )
+```
+
+---
+
+### 🧠 Práctica 1.1
+
+Calcula la distancia total media y máxima por tipo de sesión en el dataset GPS.
+
+```{webr-r}
+# Pista: group_by(TipoSesion) %>% summarise(media = mean(...), max = max(...))
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+gps %>%
+  group_by(TipoSesion) %>%
+  summarise(
+    Distancia_media = mean(Distancia_Total_m),
+    Distancia_max = max(Distancia_Total_m)
+  )
+```
+:::
+
+***
+
+## 2. Funciones de Agregación
+
+| Función | Descripción |
+|---------|-------------|
+| `n()` | Número de filas |
+| `n_distinct()` | Valores únicos |
+| `mean()` | Media |
+| `sd()` | Desviación estándar |
+| `min()`, `max()` | Mínimo, máximo |
+| `sum()` | Suma |
+| `first()`, `last()` | Primer/último valor |
+
+### Ejemplo 2.1: Conteo y valores únicos
+
+```{webr-r}
+gps %>%
+  group_by(TipoSesion) %>%
+  summarise(
+    n_registros = n(),
+    n_jugadores = n_distinct(JugadorID)
+  )
+```
+
+---
+
+***
+
+## 3. Agrupación Múltiple
+
+### Ejemplo 3.1: Dos variables de agrupación
+
+```{webr-r}
+gps %>%
+  group_by(Nombre, TipoSesion) %>%
+  summarise(
+    Distancia_media = mean(Distancia_Total_m),
+    HSR_media = mean(HSR_m),
+    .groups = "drop"  # Elimina agrupación después de summarise
+  )
+```
+
+---
+
+### 🧠 Práctica 3.1
+
+Para cada jugador, calcula el RPE medio en entrenamientos vs partidos.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+gps %>%
+  group_by(Nombre, TipoSesion) %>%
+  summarise(RPE_medio = mean(RPE), .groups = "drop") %>%
+  pivot_wider(names_from = TipoSesion, values_from = RPE_medio)
+```
+:::
+
+***
+
+## 4. Mutate con Grupos
+
+A veces quieres agregar pero **manteniendo todas las filas**. Usa `mutate()` en lugar de `summarise()`.
+
+### Ejemplo 4.1: Añadir media del grupo
+
+```{webr-r}
+atletas %>%
+  group_by(Posicion) %>%
+  mutate(
+    VO2max_grupo = mean(VO2max),
+    Diferencia_vs_grupo = VO2max - VO2max_grupo
+  ) %>%
+  select(Nombre, Posicion, VO2max, VO2max_grupo, Diferencia_vs_grupo) %>%
+  ungroup()  # Siempre desagrupar cuando termines
+```
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Análisis de Carga GPS
+
+### Pregunta 1: Perfil por Jugador
+Para cada jugador, calcula: total de sesiones, distancia media, y HSR media.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+gps %>%
+  group_by(Nombre) %>%
+  summarise(
+    Total_sesiones = n(),
+    Distancia_media = mean(Distancia_Total_m),
+    HSR_media = mean(HSR_m)
+  ) %>%
+  arrange(desc(Distancia_media))
+```
+:::
+
+### Pregunta 2: Ratio Partido/Entrenamiento
+¿Qué jugador tiene el mayor ratio de distancia en partido vs entrenamiento?
+
+```{webr-r}
+# Pista: Agrupa por Nombre y TipoSesion, luego usa pivot_wider
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+gps %>%
+  group_by(Nombre, TipoSesion) %>%
+  summarise(Dist_media = mean(Distancia_Total_m), .groups = "drop") %>%
+  pivot_wider(names_from = TipoSesion, values_from = Dist_media) %>%
+  mutate(Ratio = Partido / Entrenamiento) %>%
+  arrange(desc(Ratio))
+```
+:::
+
+### Pregunta 3: Percentil de Rendimiento
+Añade a cada jugador su percentil de VO2max dentro de su posición.
+
+```{webr-r}
+# Pista: Usa percent_rank() dentro de mutate agrupado
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  group_by(Posicion) %>%
+  mutate(
+    Percentil_VO2 = percent_rank(VO2max) * 100
+  ) %>%
+  select(Nombre, Posicion, VO2max, Percentil_VO2) %>%
+  arrange(Posicion, desc(Percentil_VO2)) %>%
+  ungroup()
+```
+:::
+
+---
+
+## Resumen
+
+| Operación | Python (Pandas) | R (Tidyverse) |
+|-----------|-----------------|---------------|
+| Agrupar | `.groupby('col')` | `group_by(col)` |
+| Agregar | `.agg({...})` | `summarise(...)` |
+| Contar | `len` o `size` | `n()` |
+| Únicos | `nunique` | `n_distinct()` |
+| Mutate por grupo | `.transform()` | `group_by() %>% mutate()` |
+| Desagrupar | Reset index | `ungroup()` |

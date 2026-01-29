@@ -1,0 +1,203 @@
+# Passing Networks (Redes de Pases)
+
+Este capítulo enseña a crear y analizar redes de pases para entender patrones tácticos.
+
+```{webr-r}
+library(tidyverse)
+
+# Datos de pases entre jugadores
+set.seed(42)
+jugadores <- c("Portero", "Central_1", "Central_2", "Lateral_D", "Lateral_I",
+               "Pivote", "Interior_D", "Interior_I", "Extremo_D", "Extremo_I", "Delantero")
+
+# Simular pases
+n_pases <- 200
+pases <- tibble(
+  De = sample(jugadores, n_pases, replace = TRUE),
+  A = sample(jugadores, n_pases, replace = TRUE),
+  Exitoso = sample(c(TRUE, FALSE), n_pases, replace = TRUE, prob = c(0.85, 0.15))
+) %>%
+  filter(De != A, Exitoso)
+
+# Posiciones medias de los jugadores
+posiciones <- tibble(
+  Jugador = jugadores,
+  X = c(5, 25, 25, 35, 35, 45, 55, 55, 75, 75, 85),
+  Y = c(50, 30, 70, 15, 85, 50, 30, 70, 20, 80, 50)
+)
+
+cat("✅ Datos cargados\n")
+cat("   Pases exitosos:", nrow(pases), "\n")
+cat("   Jugadores:", length(jugadores), "\n")
+```
+
+***
+
+## 1. Matriz de Pases
+
+```{webr-r}
+# Crear matriz de pases
+matriz_pases <- pases %>%
+  count(De, A) %>%
+  arrange(desc(n))
+
+head(matriz_pases, 10)
+```
+
+---
+
+***
+
+## 2. Visualizar la Red de Pases
+
+### Ejemplo 2.1: Red básica
+
+```{webr-r}
+# Preparar datos para visualización
+conexiones <- matriz_pases %>%
+  left_join(posiciones, by = c("De" = "Jugador")) %>%
+  rename(X_De = X, Y_De = Y) %>%
+  left_join(posiciones, by = c("A" = "Jugador")) %>%
+  rename(X_A = X, Y_A = Y)
+
+# Nodos con tamaño según total de pases
+nodos <- pases %>%
+  count(De) %>%
+  rename(Jugador = De, Pases = n) %>%
+  left_join(posiciones, by = "Jugador")
+
+# Visualizar
+ggplot() +
+  # Conexiones (pases)
+  geom_segment(data = conexiones %>% filter(n >= 3),
+               aes(x = X_De, y = Y_De, xend = X_A, yend = Y_A, linewidth = n),
+               alpha = 0.5, color = "steelblue") +
+  # Nodos (jugadores)
+  geom_point(data = nodos, aes(x = X, y = Y, size = Pases), 
+             color = "darkblue", alpha = 0.8) +
+  geom_text(data = posiciones, aes(x = X, y = Y - 5, label = Jugador),
+            size = 2.5) +
+  scale_linewidth_continuous(range = c(0.5, 3)) +
+  scale_size_continuous(range = c(3, 10)) +
+  coord_fixed(xlim = c(0, 100), ylim = c(0, 100)) +
+  labs(title = "Red de Pases") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+---
+
+***
+
+## 3. Métricas de Red
+
+### Ejemplo 3.1: Centralidad (quién recibe/da más pases)
+
+```{webr-r}
+# Pases dados
+pases_dados <- pases %>%
+  count(De) %>%
+  rename(Jugador = De, Dados = n)
+
+# Pases recibidos
+pases_recibidos <- pases %>%
+  count(A) %>%
+  rename(Jugador = A, Recibidos = n)
+
+# Combinar
+centralidad <- full_join(pases_dados, pases_recibidos, by = "Jugador") %>%
+  replace_na(list(Dados = 0, Recibidos = 0)) %>%
+  mutate(Total = Dados + Recibidos) %>%
+  arrange(desc(Total))
+
+centralidad
+```
+
+### Ejemplo 3.2: Conexiones más frecuentes
+
+```{webr-r}
+pases %>%
+  count(De, A, sort = TRUE) %>%
+  head(5)
+```
+
+---
+
+***
+
+## 4. Red en Campo de Fútbol
+
+```{webr-r}
+# Función de campo simplificada
+ggplot() +
+  # Campo
+  geom_rect(aes(xmin = 0, xmax = 100, ymin = 0, ymax = 100), 
+            fill = "#228B22", color = "white") +
+  geom_segment(aes(x = 50, y = 0, xend = 50, yend = 100), color = "white") +
+  # Conexiones
+  geom_segment(data = conexiones %>% filter(n >= 3),
+               aes(x = X_De, y = Y_De, xend = X_A, yend = Y_A, linewidth = n),
+               alpha = 0.7, color = "white") +
+  # Nodos
+  geom_point(data = nodos, aes(x = X, y = Y, size = Pases), 
+             color = "yellow", alpha = 0.9) +
+  scale_linewidth_continuous(range = c(0.5, 3)) +
+  scale_size_continuous(range = c(4, 12)) +
+  coord_fixed(xlim = c(0, 100), ylim = c(0, 100)) +
+  labs(title = "Passing Network") +
+  theme_void() +
+  theme(legend.position = "none")
+```
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Análisis Táctico
+
+### Pregunta 1: Jugador Más Central
+¿Quién es el jugador más central en la red (más pases totales)?
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+centralidad %>%
+  slice_max(Total, n = 1)
+```
+:::
+
+### Pregunta 2: Conexión Más Fuerte
+¿Cuál es la pareja de jugadores con más pases entre ellos?
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+pases %>%
+  count(De, A) %>%
+  arrange(desc(n)) %>%
+  head(1)
+```
+:::
+
+---
+
+## Resumen
+
+| Concepto | Descripción |
+|----------|-------------|
+| Nodos | Jugadores (tamaño = pases) |
+| Aristas | Conexiones (grosor = frecuencia) |
+| Centralidad | Importancia en la red |
+| Grafo dirigido | Dirección de pases |

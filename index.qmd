@@ -1,0 +1,79 @@
+# Bienvenido {.unnumbered}
+
+Este libro es una **guía completa de 0 a experto** para aprender **R y el Tidyverse**, diseñada específicamente para **Sport Scientists** que ya tienen experiencia con **Python y Pandas**.
+
+## 🎯 Filosofía del Libro
+
+No enseñamos a programar desde cero. Ya sabes qué es un dataframe, qué es filtrar, qué es agrupar. Lo que necesitas es **traducción** y **profundización**.
+
+**Para cada concepto aprenderás:**
+
+1.  **Cómo se dice en Tidyverse** — equivalencia directa con pandas
+2.  **Por qué R lo hace así** — filosofía subyacente
+3.  **Múltiples formas de hacerlo** — básica, intermedia, avanzada
+4.  **Práctica inmediata** — bloques de código editables en el navegador
+5.  **Mini-proyectos** — preguntas reales de análisis deportivo
+
+## 📊 Los Datos
+
+Todos los ejemplos usan datos realistas de **Ciencias del Deporte**:
+
+| Dataset | Descripción | Variables |
+|--------------------|----------------------------|------------------------|
+| `atletas` | Perfil físico del plantel | VO2max, FC, potencia, velocidad, salto |
+| `gps_sesiones` | Sesiones de entrenamiento/partido | Distancia, HSR, sprints, RPE, HR |
+| `tracking` | Datos de tracking 10Hz | Posición x/y, velocidad, aceleración |
+| `eventos` | Eventos de partido (estilo StatsBomb) | Pases, tiros, xG |
+| `bienestar` | Cuestionarios wellness | Sueño, fatiga, HRV |
+
+## 🗺️ Estructura del Libro
+
+| Parte | Capítulos | Contenido |
+|------------------|---------------------------|---------------------------|
+| **Fundamentos** | 1-2 | Tibbles, Pipes, Method Chaining |
+| **Data Wrangling** | 3-7 | Select, Filter, Mutate, GroupBy, Reshaping, Joins |
+| **Producción** | 8-10 | Visualización con ggplot2, Missing Data, Rendimiento |
+| **Análisis Avanzado** | 11-14 | Campos de fútbol, Estadísticas, APIs, Machine Learning |
+| **Producción** | 15 + App | Web Apps (Shiny) y Dashboards |
+
+## ⚡ Interactividad
+
+Este libro usa **Quarto Live** con **webR**. Puedes:
+
+-   ✅ **Ejecutar código R** directamente en el navegador
+-   ✅ **Modificar los ejemplos** y ver resultados inmediatos
+-   ✅ **Resolver ejercicios** sin instalar nada
+-   ✅ **Ver soluciones** desplegables para comprobar tu trabajo
+
+::: callout-tip
+## Cómo usar los bloques de código
+
+Cada bloque tiene un botón **Run Code**. Haz clic para ejecutar. Puedes editar el código antes de ejecutar.
+:::
+
+## 📚 Tabla de Equivalencias Rápida
+
+| Concepto      | Python (Pandas)            | R (Tidyverse)             |
+|---------------|----------------------------|---------------------------|
+| Pipe          | Method chaining con `.`    | `%>%` o `\|>`             |
+| Filtrar       | `.query()`                 | `filter()`                |
+| Seleccionar   | `df[['col1', 'col2']]`     | `select()`                |
+| Crear columna | `.assign()`                | `mutate()`                |
+| Agrupar       | `.groupby().agg()`         | `group_by() %>% summarise()` |
+| Ordenar       | `.sort_values()`           | `arrange()`               |
+| Ancho → Largo | `.melt()`                  | `pivot_longer()`          |
+| Largo → Ancho | `.pivot_table()`           | `pivot_wider()`           |
+| Join          | `.merge(how='left')`       | `left_join()`             |
+
+## 🆕 Contenido Destacado
+
+-   **Capítulo 11**: Visualización de campos de fútbol con ggsoccer, shotmaps y heatmaps
+-   **Capítulo 12**: Estadísticas aplicadas, correlación, regresión y xG
+-   **Capítulo 13**: APIs de datos (StatsBombR, worldfootballR)
+-   **Capítulo 14**: Introducción a Machine Learning con tidymodels
+-   **Capítulo 15**: Creación de Web Apps interactivas con Shiny
+-   **Datasets enriquecidos**: Tracking 10Hz, eventos de partido, bienestar
+
+------------------------------------------------------------------------
+
+**¡Empecemos!** 👉 Continúa al [Capítulo 1: Introducción](01_intro.qmd)

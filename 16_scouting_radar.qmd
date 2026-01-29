@@ -1,0 +1,163 @@
+# Scouting con Radar Charts
+
+Este capítulo enseña a crear gráficos de radar para comparar perfiles de jugadores.
+
+```{webr-r}
+library(tidyverse)
+
+# Dataset de métricas de jugadores normalizadas (percentiles 0-100)
+jugadores_radar <- tibble(
+  Jugador = c("García", "López", "Martínez"),
+  Goles = c(85, 45, 20),
+  Asistencias = c(70, 80, 30),
+  Pases_completados = c(60, 90, 75),
+  Regates = c(75, 55, 25),
+  Duelos_aereos = c(40, 35, 85),
+  Duelos_defensivos = c(30, 50, 90),
+  Intercepciones = c(25, 45, 88)
+)
+
+cat("✅ Datos cargados\n")
+print(jugadores_radar)
+```
+
+***
+
+## 1. Preparación de Datos para Radar
+
+### Ejemplo 1.1: Formato largo para ggplot
+
+```{webr-r}
+radar_largo <- jugadores_radar %>%
+  pivot_longer(-Jugador, names_to = "Metrica", values_to = "Valor")
+
+radar_largo
+```
+
+---
+
+***
+
+## 2. Radar con coord_polar
+
+### Ejemplo 2.1: Radar básico
+
+```{webr-r}
+ggplot(radar_largo %>% filter(Jugador == "García"), 
+       aes(x = Metrica, y = Valor, group = 1)) +
+  geom_polygon(fill = "steelblue", alpha = 0.4, color = "steelblue") +
+  geom_point(color = "steelblue", size = 3) +
+  coord_polar() +
+  ylim(0, 100) +
+  labs(title = "Perfil de García") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 8))
+```
+
+### Ejemplo 2.2: Comparación de dos jugadores
+
+```{webr-r}
+radar_largo %>%
+  filter(Jugador %in% c("García", "Martínez")) %>%
+  ggplot(aes(x = Metrica, y = Valor, group = Jugador, 
+             fill = Jugador, color = Jugador)) +
+  geom_polygon(alpha = 0.3) +
+  geom_point(size = 2) +
+  coord_polar() +
+  ylim(0, 100) +
+  labs(title = "Comparación: García vs Martínez") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(size = 7))
+```
+
+---
+
+***
+
+## 3. Radar Mejorado con Líneas de Referencia
+
+```{webr-r}
+# Crear círculos de referencia
+circulos <- tibble(
+  Nivel = rep(c(25, 50, 75, 100), each = length(unique(radar_largo$Metrica))),
+  Metrica = rep(unique(radar_largo$Metrica), 4)
+)
+
+ggplot() +
+  # Círculos de referencia
+  geom_polygon(data = circulos, aes(x = Metrica, y = Nivel, group = Nivel),
+               fill = NA, color = "gray80", linetype = "dashed") +
+  # Datos del jugador
+  geom_polygon(data = radar_largo %>% filter(Jugador == "López"),
+               aes(x = Metrica, y = Valor, group = 1),
+               fill = "coral", alpha = 0.4, color = "coral") +
+  geom_point(data = radar_largo %>% filter(Jugador == "López"),
+             aes(x = Metrica, y = Valor), color = "coral", size = 3) +
+  coord_polar() +
+  ylim(0, 100) +
+  labs(title = "Perfil de López (Percentiles)") +
+  theme_minimal()
+```
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Herramienta de Scouting
+
+### Pregunta 1: Radar de Tres Jugadores
+Crea un radar comparando los 3 jugadores del dataset.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+radar_largo %>%
+  ggplot(aes(x = Metrica, y = Valor, group = Jugador, 
+             fill = Jugador, color = Jugador)) +
+  geom_polygon(alpha = 0.2) +
+  geom_point(size = 2) +
+  coord_polar() +
+  ylim(0, 100) +
+  facet_wrap(~Jugador) +
+  labs(title = "Perfiles de Jugadores") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(size = 6))
+```
+:::
+
+### Pregunta 2: Score Global
+Calcula un score global (media de todas las métricas) y ordena los jugadores.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+jugadores_radar %>%
+  pivot_longer(-Jugador, names_to = "Metrica", values_to = "Valor") %>%
+  group_by(Jugador) %>%
+  summarise(Score_Global = mean(Valor)) %>%
+  arrange(desc(Score_Global))
+```
+:::
+
+---
+
+## Resumen
+
+| Elemento | Función |
+|----------|---------|
+| Formato largo | `pivot_longer()` |
+| Radar | `geom_polygon() + coord_polar()` |
+| Comparación | Múltiples `geom_polygon()` o `facet_wrap()` |

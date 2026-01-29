@@ -1,0 +1,280 @@
+# Joins: Combinación de Tablas
+
+Este capítulo traduce `.merge()` de pandas a las funciones `*_join()` de dplyr.
+
+```{webr-r}
+library(tidyverse)
+
+# Dataset de atletas (info básica)
+atletas <- tibble(
+  JugadorID = sprintf("ATL_%03d", 1:8),
+  Nombre = c('García', 'López', 'Martínez', 'Sánchez', 
+             'Fernández', 'González', 'Rodríguez', 'Pérez'),
+  Posicion = c('Delantero', 'Mediocentro', 'Defensa', 'Portero',
+              'Delantero', 'Mediocentro', 'Defensa', 'Delantero')
+)
+
+# Dataset de métricas físicas (solo algunos jugadores)
+metricas <- tibble(
+  JugadorID = c('ATL_001', 'ATL_002', 'ATL_003', 'ATL_005', 'ATL_006', 'ATL_010'),
+  VO2max = c(58.5, 62.1, 55.0, 60.5, 59.0, 57.0),
+  VelocidadMax = c(32.5, 31.0, 30.2, 33.8, 31.5, 30.0)
+)
+
+# Dataset de lesiones
+lesiones <- tibble(
+  JugadorID = c('ATL_002', 'ATL_003', 'ATL_007'),
+  TipoLesion = c('Isquios', 'Tobillo', 'Rodilla'),
+  DiasOut = c(21, 7, 45)
+)
+
+cat("✅ Datos cargados\n")
+cat("   atletas:", nrow(atletas), "jugadores\n")
+cat("   metricas:", nrow(metricas), "registros\n")
+cat("   lesiones:", nrow(lesiones), "registros\n")
+```
+
+***
+
+## 1. Left Join
+
+Mantiene **todas las filas de la tabla izquierda** y añade columnas de la derecha donde hay match.
+
+### Ejemplo 1.1: Añadir métricas a atletas
+
+**En Python:**
+```python
+atletas.merge(metricas, on='JugadorID', how='left')
+```
+
+**En R:**
+```{webr-r}
+atletas %>%
+  left_join(metricas, by = "JugadorID")
+```
+
+::: callout-note
+Los jugadores sin métricas (ATL_004, ATL_007, ATL_008) tienen `NA` en las columnas añadidas.
+:::
+
+---
+
+### 🧠 Práctica 1.1
+
+Añade la información de lesiones a los atletas usando left_join.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  left_join(lesiones, by = "JugadorID")
+```
+:::
+
+***
+
+## 2. Inner Join
+
+Mantiene **solo las filas que tienen match** en ambas tablas.
+
+### Ejemplo 2.1: Solo atletas con métricas
+
+**En Python:**
+```python
+atletas.merge(metricas, on='JugadorID', how='inner')
+```
+
+**En R:**
+```{webr-r}
+atletas %>%
+  inner_join(metricas, by = "JugadorID")
+```
+
+---
+
+***
+
+## 3. Full Join
+
+Mantiene **todas las filas de ambas tablas**.
+
+```{webr-r}
+atletas %>%
+  full_join(metricas, by = "JugadorID")
+```
+
+---
+
+***
+
+## 4. Anti Join y Semi Join
+
+### Ejemplo 4.1: anti_join - Filas SIN match
+
+¿Qué atletas NO tienen métricas registradas?
+
+```{webr-r}
+atletas %>%
+  anti_join(metricas, by = "JugadorID")
+```
+
+### Ejemplo 4.2: semi_join - Filas CON match (sin añadir columnas)
+
+¿Qué atletas SÍ tienen métricas? (sin mostrar las métricas)
+
+```{webr-r}
+atletas %>%
+  semi_join(metricas, by = "JugadorID")
+```
+
+---
+
+### 🧠 Práctica 4.1
+
+Encuentra los atletas que han tenido alguna lesión.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+# Opción 1: semi_join (solo nombres)
+atletas %>%
+  semi_join(lesiones, by = "JugadorID")
+
+# Opción 2: inner_join (con detalles de lesión)
+atletas %>%
+  inner_join(lesiones, by = "JugadorID")
+```
+:::
+
+***
+
+## 5. Joins con Diferentes Nombres de Columna
+
+```{webr-r}
+# Si las columnas tienen nombres diferentes
+equipo_a <- tibble(
+  ID_Jugador = c("J001", "J002"),
+  Nombre = c("García", "López")
+)
+
+stats_partido <- tibble(
+  Jugador_ID = c("J001", "J002"),
+  Goles = c(2, 1)
+)
+
+equipo_a %>%
+  left_join(stats_partido, by = c("ID_Jugador" = "Jugador_ID"))
+```
+
+---
+
+***
+
+## 6. Combinar Filas: bind_rows()
+
+**En Python:** `pd.concat([df1, df2])`
+
+**En R:**
+```{webr-r}
+semana1 <- tibble(Jugador = c("García", "López"), Distancia = c(42000, 38000))
+semana2 <- tibble(Jugador = c("García", "López"), Distancia = c(45000, 40000))
+
+bind_rows(
+  semana1 %>% mutate(Semana = 1),
+  semana2 %>% mutate(Semana = 2)
+)
+```
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Dashboard de Disponibilidad
+
+### Pregunta 1: Estado Completo del Plantel
+Crea una tabla con todos los atletas, sus métricas (si existen) y su estado de lesión.
+
+```{webr-r}
+# Pista: Encadena dos left_join
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  left_join(metricas, by = "JugadorID") %>%
+  left_join(lesiones, by = "JugadorID") %>%
+  mutate(
+    Estado = if_else(is.na(TipoLesion), "Disponible", "Lesionado")
+  )
+```
+:::
+
+### Pregunta 2: Atletas sin Evaluar
+¿Cuántos atletas no tienen métricas físicas registradas?
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  anti_join(metricas, by = "JugadorID") %>%
+  nrow()
+```
+:::
+
+### Pregunta 3: Promedio por Posición (solo evaluados)
+Calcula el VO2max medio por posición, considerando solo atletas con métricas.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+atletas %>%
+  inner_join(metricas, by = "JugadorID") %>%
+  group_by(Posicion) %>%
+  summarise(
+    n = n(),
+    VO2max_medio = mean(VO2max)
+  )
+```
+:::
+
+---
+
+## Resumen
+
+| Tipo de Join | Python (Pandas) | R (Tidyverse) | Resultado |
+|--------------|-----------------|---------------|-----------|
+| Left | `.merge(how='left')` | `left_join()` | Todas las filas izq + match der |
+| Inner | `.merge(how='inner')` | `inner_join()` | Solo filas con match |
+| Full | `.merge(how='outer')` | `full_join()` | Todas las filas de ambas |
+| Anti | No directo | `anti_join()` | Filas izq SIN match |
+| Semi | No directo | `semi_join()` | Filas izq CON match |
+| Concat | `pd.concat()` | `bind_rows()` | Apilar filas |

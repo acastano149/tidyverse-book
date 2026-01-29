@@ -1,0 +1,253 @@
+# Reshaping: Transformación de Formato
+
+Este capítulo traduce `.melt()` y `.pivot_table()` de pandas a `pivot_longer()` y `pivot_wider()` de tidyr.
+
+```{webr-r}
+library(tidyverse)
+
+# Dataset de bienestar (formato ancho)
+bienestar_ancho <- tibble(
+  JugadorID = sprintf("ATL_%03d", 1:5),
+  Nombre = c('García', 'López', 'Martínez', 'Sánchez', 'Fernández'),
+  Sueno_Lunes = c(7, 6, 8, 5, 7),
+  Sueno_Martes = c(8, 7, 7, 6, 8),
+  Sueno_Miercoles = c(7, 8, 6, 7, 7),
+  Fatiga_Lunes = c(3, 4, 2, 5, 3),
+  Fatiga_Martes = c(2, 3, 3, 4, 2),
+  Fatiga_Miercoles = c(4, 2, 4, 3, 4)
+)
+
+# Dataset GPS agregado por semana (formato largo)
+gps_largo <- tibble(
+  JugadorID = rep(sprintf("ATL_%03d", 1:3), each = 4),
+  Semana = rep(1:4, 3),
+  Metrica = rep(c('Distancia', 'HSR', 'Sprints', 'RPE'), 3),
+  Valor = c(42000, 3200, 450, 6.5,  # García semanas 1-4
+           38000, 2800, 380, 7.2,  # López
+           45000, 3500, 520, 5.8)  # Martínez
+)
+
+cat("✅ Datos cargados\n")
+cat("   bienestar_ancho:", dim(bienestar_ancho), "\n")
+cat("   gps_largo:", dim(gps_largo), "\n")
+```
+
+***
+
+## 1. De Ancho a Largo: pivot_longer()
+
+### Ejemplo 1.1: Transformación básica
+
+Los datos "anchos" tienen muchas columnas que representan la misma variable medida en diferentes momentos o condiciones.
+
+**En Python:**
+```python
+bienestar_ancho.melt(
+    id_vars=['JugadorID', 'Nombre'],
+    value_vars=['Sueno_Lunes', 'Sueno_Martes', 'Sueno_Miercoles']
+)
+```
+
+**En R:**
+```{webr-r}
+bienestar_ancho %>%
+  pivot_longer(
+    cols = starts_with("Sueno"),
+    names_to = "Dia",
+    values_to = "Horas_Sueno"
+  )
+```
+
+### Ejemplo 1.2: Limpieza del nombre
+
+```{webr-r}
+bienestar_ancho %>%
+  pivot_longer(
+    cols = starts_with("Sueno"),
+    names_to = "Dia",
+    names_prefix = "Sueno_",  # Elimina el prefijo
+    values_to = "Horas_Sueno"
+  )
+```
+
+---
+
+### 🧠 Práctica 1.1
+
+Transforma las columnas de Fatiga a formato largo.
+
+```{webr-r}
+# Pista: starts_with("Fatiga"), names_prefix = "Fatiga_"
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+bienestar_ancho %>%
+  pivot_longer(
+    cols = starts_with("Fatiga"),
+    names_to = "Dia",
+    names_prefix = "Fatiga_",
+    values_to = "Nivel_Fatiga"
+  )
+```
+:::
+
+***
+
+## 2. De Largo a Ancho: pivot_wider()
+
+### Ejemplo 2.1: Una variable a múltiples columnas
+
+**En Python:**
+```python
+gps_largo.pivot_table(index=['JugadorID', 'Semana'], columns='Metrica', values='Valor')
+```
+
+**En R:**
+```{webr-r}
+gps_largo %>%
+  pivot_wider(
+    names_from = Metrica,
+    values_from = Valor
+  )
+```
+
+### Ejemplo 2.2: Con prefijo en nombres
+
+```{webr-r}
+gps_largo %>%
+  pivot_wider(
+    names_from = Metrica,
+    values_from = Valor,
+    names_prefix = "Met_"
+  )
+```
+
+---
+
+### 🧠 Práctica 2.1
+
+Usando el resultado de pivot_longer de bienestar (Sueño), vuélvelo a formato ancho.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+bienestar_ancho %>%
+  pivot_longer(
+    cols = starts_with("Sueno"),
+    names_to = "Dia",
+    names_prefix = "Sueno_",
+    values_to = "Horas_Sueno"
+  ) %>%
+  pivot_wider(
+    names_from = Dia,
+    values_from = Horas_Sueno,
+    names_prefix = "Sueno_"
+  )
+```
+:::
+
+***
+
+## 3. Separar y Unir Columnas
+
+### Ejemplo 3.1: separate()
+
+Si tienes columnas con información compuesta:
+
+```{webr-r}
+# Datos con columnas combinadas
+datos_combinados <- tibble(
+  ID = 1:3,
+  Jugador_Posicion = c("García_Delantero", "López_Mediocentro", "Martínez_Defensa")
+)
+
+datos_combinados %>%
+  separate(Jugador_Posicion, into = c("Nombre", "Posicion"), sep = "_")
+```
+
+### Ejemplo 3.2: unite()
+
+```{webr-r}
+tibble(
+  Nombre = c("García", "López"),
+  Posicion = c("Delantero", "Mediocentro")
+) %>%
+  unite("Jugador_Info", Nombre, Posicion, sep = " - ")
+```
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Análisis de Bienestar
+
+### Pregunta 1: Formato Tidy Completo
+Transforma todo bienestar_ancho a formato largo con columnas: JugadorID, Nombre, Variable, Dia, Valor.
+
+```{webr-r}
+# Pista: Usa pivot_longer con varias columnas y separa Variable_Dia
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+bienestar_ancho %>%
+  pivot_longer(
+    cols = -c(JugadorID, Nombre),
+    names_to = "Variable_Dia",
+    values_to = "Valor"
+  ) %>%
+  separate(Variable_Dia, into = c("Variable", "Dia"), sep = "_")
+```
+:::
+
+### Pregunta 2: Media por Día
+Calcula la media de Sueño por día (después de transformar a formato largo).
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+bienestar_ancho %>%
+  pivot_longer(
+    cols = starts_with("Sueno"),
+    names_to = "Dia",
+    names_prefix = "Sueno_",
+    values_to = "Horas_Sueno"
+  ) %>%
+  group_by(Dia) %>%
+  summarise(Sueno_medio = mean(Horas_Sueno))
+```
+:::
+
+---
+
+## Resumen
+
+| Operación | Python (Pandas) | R (Tidyverse) |
+|-----------|-----------------|---------------|
+| Ancho → Largo | `.melt()` | `pivot_longer()` |
+| Largo → Ancho | `.pivot_table()` | `pivot_wider()` |
+| Separar columna | `.str.split()` | `separate()` |
+| Unir columnas | String concat | `unite()` |

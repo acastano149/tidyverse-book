@@ -1,0 +1,238 @@
+# Visualización Avanzada para Fútbol
+
+Este capítulo cubre visualizaciones profesionales: campos de fútbol, shotmaps, passmaps y heatmaps usando ggsoccer y ggplot2.
+
+::: {.callout-note}
+## Librerías necesarias
+Este capítulo usa `ggsoccer`, una librería para dibujar campos de fútbol en ggplot2.
+:::
+
+```{webr-r}
+library(tidyverse)
+
+# Para campos de fútbol, normalmente usarías:
+# library(ggsoccer)
+# Como estamos en webR, crearemos manualmente el campo
+
+# ============================================
+# DATOS DE EVENTOS (Estilo StatsBomb)
+# ============================================
+set.seed(42)
+
+# Tiros de un partido (coordenadas 0-100)
+tiros <- tibble(
+  JugadorID = c('ATL_001', 'ATL_002', 'ATL_008', 'ATL_012', 'ATL_001', 
+                'ATL_005', 'ATL_008', 'ATL_001', 'ATL_012', 'ATL_002'),
+  Nombre = c('García', 'López', 'Pérez', 'Moreno', 'García',
+             'Fernández', 'Pérez', 'García', 'Moreno', 'López'),
+  X = c(92, 88, 95, 85, 102, 78, 98, 90, 82, 94) / 105 * 100,
+  Y = c(35, 42, 30, 50, 34, 38, 45, 28, 55, 40) / 68 * 100,
+  xG = c(0.12, 0.08, 0.25, 0.05, 0.42, 0.03, 0.18, 0.15, 0.04, 0.09),
+  Resultado = c('Fuera', 'A puerta', 'Gol', 'Bloqueado', 'Gol', 
+                'Fuera', 'A puerta', 'Fuera', 'Bloqueado', 'A puerta'),
+  Minuto = c(12, 23, 34, 41, 52, 58, 67, 73, 81, 88)
+)
+
+# Posiciones para heatmap
+posiciones <- tibble(
+  X = pmax(pmin(rnorm(500, 55, 20), 100), 0),
+  Y = pmax(pmin(rnorm(500, 50, 15), 100), 0)
+)
+
+cat("✅ Datos cargados\n")
+cat("   Tiros:", nrow(tiros), "\n")
+cat("   Posiciones:", nrow(posiciones), "\n")
+```
+
+***
+
+## 1. Dibujar un Campo de Fútbol
+
+### Ejemplo 1.1: Campo básico con ggplot2
+
+```{webr-r}
+# Función para crear campo de fútbol
+crear_campo <- function() {
+  campo <- list(
+    # Fondo
+    geom_rect(aes(xmin = 0, xmax = 100, ymin = 0, ymax = 100), 
+              fill = "#228B22", color = "white"),
+    # Línea central
+    geom_segment(aes(x = 50, y = 0, xend = 50, yend = 100), color = "white"),
+    # Círculo central
+    annotate("path", x = 50 + 9.15 * cos(seq(0, 2*pi, length.out = 100)),
+             y = 50 + 9.15 * sin(seq(0, 2*pi, length.out = 100)), color = "white"),
+    # Área grande izquierda
+    geom_rect(aes(xmin = 0, xmax = 16.5, ymin = 21, ymax = 79), 
+              fill = NA, color = "white"),
+    # Área grande derecha
+    geom_rect(aes(xmin = 83.5, xmax = 100, ymin = 21, ymax = 79), 
+              fill = NA, color = "white"),
+    # Área pequeña izquierda
+    geom_rect(aes(xmin = 0, xmax = 5.5, ymin = 37, ymax = 63), 
+              fill = NA, color = "white"),
+    # Área pequeña derecha
+    geom_rect(aes(xmin = 94.5, xmax = 100, ymin = 37, ymax = 63), 
+              fill = NA, color = "white"),
+    # Puntos de penalti
+    annotate("point", x = c(11, 89), y = c(50, 50), color = "white", size = 2),
+    # Tema
+    coord_fixed(ratio = 68/105),
+    theme_void()
+  )
+  return(campo)
+}
+
+# Dibujar campo vacío
+ggplot() +
+  crear_campo() +
+  labs(title = "Campo de Fútbol con ggplot2")
+```
+
+---
+
+***
+
+## 2. Shotmap (Mapa de Tiros)
+
+### Ejemplo 2.1: Visualizar tiros con xG
+
+```{webr-r}
+ggplot(tiros) +
+  crear_campo() +
+  geom_point(aes(x = X, y = Y, size = xG, color = Resultado), alpha = 0.8) +
+  scale_color_manual(values = c("Gol" = "red", "A puerta" = "yellow", 
+                                "Fuera" = "gray", "Bloqueado" = "darkgray")) +
+  scale_size_continuous(range = c(3, 10)) +
+  labs(title = "Shotmap con xG",
+       subtitle = "Tamaño proporcional al xG") +
+  theme(legend.position = "right")
+```
+
+### Ejemplo 2.2: Shotmap solo mitad ofensiva
+
+```{webr-r}
+ggplot(tiros) +
+  crear_campo() +
+  geom_point(aes(x = X, y = Y, size = xG, color = Resultado), alpha = 0.8) +
+  geom_text(aes(x = X, y = Y - 3, label = sprintf("%.2f", xG)), 
+            size = 2.5, color = "white") +
+  scale_color_manual(values = c("Gol" = "red", "A puerta" = "yellow", 
+                                "Fuera" = "gray", "Bloqueado" = "darkgray")) +
+  coord_fixed(ratio = 68/105, xlim = c(50, 102)) +
+  labs(title = "Shotmap - Zona Ofensiva")
+```
+
+---
+
+### 🧠 Práctica 2.1
+
+Crea un shotmap solo de los tiros de García.
+
+```{webr-r}
+# Pista: filter(Nombre == "García") antes del ggplot
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+tiros %>%
+  filter(Nombre == "García") %>%
+  ggplot() +
+  crear_campo() +
+  geom_point(aes(x = X, y = Y, size = xG, color = Resultado), alpha = 0.8) +
+  scale_color_manual(values = c("Gol" = "red", "Fuera" = "gray")) +
+  coord_fixed(ratio = 68/105, xlim = c(50, 102)) +
+  labs(title = "Tiros de García")
+```
+:::
+
+***
+
+## 3. Heatmap de Posiciones
+
+### Ejemplo 3.1: Heatmap con stat_density_2d
+
+```{webr-r}
+ggplot(posiciones, aes(x = X, y = Y)) +
+  crear_campo() +
+  stat_density_2d(aes(fill = after_stat(level)), geom = "polygon", alpha = 0.6) +
+  scale_fill_gradient(low = "yellow", high = "red") +
+  labs(title = "Heatmap de Posiciones")
+```
+
+### Ejemplo 3.2: Heatmap con bins (estilo cuadrícula)
+
+```{webr-r}
+ggplot(posiciones, aes(x = X, y = Y)) +
+  crear_campo() +
+  geom_bin2d(bins = 15, alpha = 0.7) +
+  scale_fill_gradient(low = "lightyellow", high = "darkred") +
+  labs(title = "Heatmap de Posiciones (Bins)")
+```
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Dashboard de Análisis de Tiros
+
+### Pregunta 1: Análisis de xG
+Calcula el xG total del equipo y compara con goles reales.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+xg_total <- sum(tiros$xG)
+goles_reales <- sum(tiros$Resultado == "Gol")
+
+cat("xG Total:", round(xg_total, 2), "goles esperados\n")
+cat("Goles reales:", goles_reales, "\n")
+cat("Diferencia:", goles_reales - xg_total, "\n")
+```
+:::
+
+### Pregunta 2: xG por Jugador
+Crea un gráfico de barras con el xG acumulado por jugador.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+tiros %>%
+  group_by(Nombre) %>%
+  summarise(xG_total = sum(xG), Tiros = n()) %>%
+  ggplot(aes(x = reorder(Nombre, xG_total), y = xG_total, fill = Nombre)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "xG por Jugador", x = "", y = "xG Total") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+:::
+
+---
+
+## Resumen
+
+| Tipo de Visualización | Método en R |
+|-----------------------|-------------|
+| Campo de fútbol | `ggplot2` + geometrías manuales o `ggsoccer` |
+| Shotmap | `geom_point()` con size = xG |
+| Heatmap (densidad) | `stat_density_2d()` |
+| Heatmap (bins) | `geom_bin2d()` |

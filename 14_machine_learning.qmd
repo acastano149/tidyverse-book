@@ -1,0 +1,220 @@
+# Machine Learning con tidymodels
+
+Este capítulo introduce tidymodels, el ecosistema de ML del tidyverse, comparable a scikit-learn.
+
+```{webr-r}
+library(tidyverse)
+
+# Dataset para clustering
+set.seed(42)
+jugadores_cluster <- tibble(
+  Nombre = paste0("Jugador_", 1:50),
+  Goles_90 = c(rnorm(15, 0.6, 0.15), rnorm(20, 0.2, 0.1), rnorm(15, 0.1, 0.05)),
+  Asistencias_90 = c(rnorm(15, 0.3, 0.1), rnorm(20, 0.4, 0.1), rnorm(15, 0.1, 0.05)),
+  Pases_90 = c(rnorm(15, 30, 8), rnorm(20, 55, 10), rnorm(15, 40, 8)),
+  Duelos_90 = c(rnorm(15, 5, 2), rnorm(20, 8, 2), rnorm(15, 12, 3)),
+  Posicion = c(rep("Delantero", 15), rep("Mediocampista", 20), rep("Defensa", 15))
+)
+
+# Dataset para clasificación (predicción de gol)
+tiros_ml <- tibble(
+  Distancia = runif(300, 5, 35),
+  Angulo = runif(300, 5, 80),
+  Tipo = sample(c("Pie_derecho", "Pie_izquierdo", "Cabeza"), 300, replace = TRUE, 
+                prob = c(0.55, 0.25, 0.2)),
+  Presion_defensiva = sample(c("Alta", "Media", "Baja"), 300, replace = TRUE)
+) %>%
+  mutate(
+    prob = 0.4 - 0.012 * Distancia + 0.004 * Angulo,
+    prob = if_else(Tipo == "Cabeza", prob * 0.7, prob),
+    prob = pmax(pmin(prob, 0.9), 0.05),
+    Gol = factor(rbinom(300, 1, prob), labels = c("No", "Si"))
+  ) %>%
+  select(-prob)
+
+cat("✅ Datos cargados\n")
+cat("   jugadores_cluster:", nrow(jugadores_cluster), "\n")
+cat("   tiros_ml:", nrow(tiros_ml), "\n")
+```
+
+***
+
+## 1. Clustering: K-Means
+
+### Ejemplo 1.1: Clustering básico
+
+```{webr-r}
+# Seleccionar y escalar variables numéricas
+datos_cluster <- jugadores_cluster %>%
+  select(Goles_90, Asistencias_90, Pases_90, Duelos_90) %>%
+  scale()
+
+# Aplicar K-means
+set.seed(42)
+km <- kmeans(datos_cluster, centers = 3, nstart = 25)
+
+# Añadir clusters al dataset
+jugadores_cluster$Cluster <- factor(km$cluster)
+
+# Ver distribución
+table(jugadores_cluster$Cluster, jugadores_cluster$Posicion)
+```
+
+### Ejemplo 1.2: Visualizar clusters
+
+```{webr-r}
+ggplot(jugadores_cluster, aes(x = Goles_90, y = Pases_90, color = Cluster, shape = Posicion)) +
+  geom_point(size = 3, alpha = 0.7) +
+  labs(title = "Clustering de Jugadores",
+       x = "Goles por 90 min",
+       y = "Pases por 90 min") +
+  theme_minimal()
+```
+
+### Ejemplo 1.3: Perfil de cada cluster
+
+```{webr-r}
+jugadores_cluster %>%
+  group_by(Cluster) %>%
+  summarise(
+    n = n(),
+    Goles_90 = round(mean(Goles_90), 2),
+    Asistencias_90 = round(mean(Asistencias_90), 2),
+    Pases_90 = round(mean(Pases_90), 1),
+    Duelos_90 = round(mean(Duelos_90), 1)
+  )
+```
+
+---
+
+***
+
+## 2. Clasificación: Regresión Logística
+
+### Ejemplo 2.1: División train/test
+
+```{webr-r}
+# División simple (80/20)
+set.seed(42)
+n <- nrow(tiros_ml)
+train_idx <- sample(1:n, size = 0.8 * n)
+
+train_data <- tiros_ml[train_idx, ]
+test_data <- tiros_ml[-train_idx, ]
+
+cat("Train:", nrow(train_data), "filas\n")
+cat("Test:", nrow(test_data), "filas\n")
+```
+
+### Ejemplo 2.2: Entrenar modelo
+
+```{webr-r}
+# Modelo de regresión logística
+modelo <- glm(Gol ~ Distancia + Angulo + Tipo + Presion_defensiva,
+              data = train_data, family = binomial)
+
+summary(modelo)
+```
+
+### Ejemplo 2.3: Predicciones y evaluación
+
+```{webr-r}
+# Predecir probabilidades
+test_data$prob_gol <- predict(modelo, newdata = test_data, type = "response")
+test_data$pred_gol <- factor(if_else(test_data$prob_gol > 0.5, "Si", "No"))
+
+# Matriz de confusión
+table(Prediccion = test_data$pred_gol, Real = test_data$Gol)
+
+# Accuracy
+mean(test_data$pred_gol == test_data$Gol)
+```
+
+---
+
+***
+
+## 3. Introducción a tidymodels
+
+::: callout-note
+En tu entorno local, tidymodels ofrece un flujo más estructurado:
+```r
+library(tidymodels)
+
+# Recipe (preprocesamiento)
+receta <- recipe(Gol ~ ., data = train_data) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_normalize(all_numeric_predictors())
+
+# Model specification
+modelo_spec <- logistic_reg() %>%
+  set_engine("glm")
+
+# Workflow
+flujo <- workflow() %>%
+  add_recipe(receta) %>%
+  add_model(modelo_spec)
+
+# Fit
+ajuste <- fit(flujo, data = train_data)
+```
+:::
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Scouting con ML
+
+### Pregunta 1: Encontrar Perfiles Similares
+¿Qué jugadores del cluster 1 (delanteros) tienen perfil más ofensivo?
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+jugadores_cluster %>%
+  filter(Cluster == 1) %>%
+  mutate(Score_ofensivo = Goles_90 + Asistencias_90) %>%
+  arrange(desc(Score_ofensivo)) %>%
+  head(5)
+```
+:::
+
+### Pregunta 2: Importancia de Variables
+¿Qué variable tiene más impacto en la probabilidad de gol?
+
+```{webr-r}
+# Pista: Mira los coeficientes del modelo
+
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+# Coeficientes estandarizados (aproximación)
+coefs <- coef(modelo)[-1] # Sin intercepto
+abs_coefs <- abs(coefs)
+sort(abs_coefs, decreasing = TRUE)
+```
+:::
+
+---
+
+## Resumen
+
+| Tarea | Python (sklearn) | R (tidymodels/base) |
+|-------|------------------|---------------------|
+| Clustering | `KMeans()` | `kmeans()` |
+| Train/Test split | `train_test_split()` | `initial_split()` |
+| Regresión logística | `LogisticRegression()` | `glm(family=binomial)` |
+| Predicciones | `.predict_proba()` | `predict(type="response")` |
+| Pipeline | `Pipeline()` | `workflow()` |

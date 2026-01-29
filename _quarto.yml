@@ -1,0 +1,75 @@
+project:
+  type: book
+  output-dir: _book
+  resources:
+    - data/
+
+website:
+  site-url: "https://acastano149.github.io/learn-tidyverse-book/"
+  repo-url: "https://github.com/acastano149/learn-tidyverse-book"
+
+
+book:
+  title: "Tidyverse para Pandas Users: Edición Sports Science"
+  author: "Antigravity Assistant"
+  date: "2026-01-14"
+  chapters:
+    - index.qmd
+    - part: "Fundamentos"
+      chapters:
+        - 01_intro.qmd
+        - 02_flujo_trabajo.qmd
+    - part: "Manipulación de Datos"
+      chapters:
+        - 03_verbos_1.qmd
+        - 04_verbos_2.qmd
+        - 05_agregacion.qmd
+    - part: "Transformación y Combinación"
+      chapters:
+        - 06_reshaping.qmd
+        - 07_joins.qmd
+    - part: "Visualización y Producción"
+      chapters:
+        - 08_visualizacion.qmd
+        - 09_missing_data.qmd
+        - 10_rendimiento.qmd
+    - part: "Análisis avanzado en fútbol"
+      chapters:
+        - 11_visualizacion_avanzada.qmd
+        - 12_estadisticas.qmd
+        - 13_apis_datos.qmd
+        - 14_machine_learning.qmd
+        - 15_shiny.qmd
+        - 16_scouting_radar.qmd
+        - 17_expected_threat.qmd
+        - 18_passing_networks.qmd
+        - 19_pitch_control.qmd
+        - 20_simulacion_partidos.qmd
+
+
+# Deshabilitar ejecución local - webR maneja todo en el navegador
+execute:
+  enabled: false
+
+format:
+  live-html:
+    theme: cosmo
+    code-copy: true
+    toc: true
+    number-sections: true
+    embed-resources: false
+
+filters:
+  - r-wasm/live
+
+webr:
+  packages:
+    - tidyverse
+    - ggplot2
+    - dplyr
+    - tidyr
+    - readr
+    - purrr
+    - stringr
+    - forcats
+    - lubridate

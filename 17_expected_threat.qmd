@@ -1,0 +1,207 @@
+# Expected Threat (xT)
+
+El **Expected Goals (xG)** solo mide el valor de los tiros. Pero, ¿cómo valoramos un pase brillante que no termina en disparo? El **Expected Threat (xT)** resuelve este problema.
+
+## 1. ¿Qué es Expected Threat?
+
+xT responde a la pregunta:
+
+> "¿Cuánto aumenta o disminuye la probabilidad de marcar gol como resultado de una acción?"
+
+Un pase desde el centro del campo hacia el área aumenta el xT. Un pase hacia atrás lo disminuye.
+
+```{webr-r}
+library(tidyverse)
+
+# ============================================
+# MATRIZ DE xT (Simplificada 12x8)
+# ============================================
+# Esta matriz representa la probabilidad de marcar gol
+# desde cada zona del campo. Basada en datos reales de ligas europeas.
+
+xT_matrix <- matrix(
+  c(0.001, 0.002, 0.003, 0.004, 0.005, 0.007, 0.010, 0.015, 0.020, 0.030, 0.050, 0.070,
+    0.001, 0.002, 0.003, 0.005, 0.007, 0.010, 0.015, 0.025, 0.040, 0.060, 0.100, 0.150,
+    0.001, 0.002, 0.004, 0.006, 0.010, 0.015, 0.025, 0.040, 0.070, 0.120, 0.200, 0.300,
+    0.001, 0.003, 0.005, 0.008, 0.012, 0.020, 0.035, 0.060, 0.100, 0.180, 0.300, 0.380,
+    0.001, 0.003, 0.005, 0.008, 0.012, 0.020, 0.035, 0.060, 0.100, 0.180, 0.300, 0.380,
+    0.001, 0.002, 0.004, 0.006, 0.010, 0.015, 0.025, 0.040, 0.070, 0.120, 0.200, 0.300,
+    0.001, 0.002, 0.003, 0.005, 0.007, 0.010, 0.015, 0.025, 0.040, 0.060, 0.100, 0.150,
+    0.001, 0.002, 0.003, 0.004, 0.005, 0.007, 0.010, 0.015, 0.020, 0.030, 0.050, 0.070),
+  nrow = 8, ncol = 12, byrow = TRUE
+)
+
+cat("✅ Matriz xT cargada:", dim(xT_matrix), "\n")
+cat("xT máximo (frente a portería):", max(xT_matrix), "\n")
+cat("xT mínimo (defensa propia):", min(xT_matrix), "\n")
+```
+
+***
+
+## 2. Visualizar la Matriz xT
+
+```{webr-r}
+# Convertir matriz a tibble para ggplot
+xT_df <- expand.grid(Y = 1:8, X = 1:12) %>%
+  mutate(xT = as.vector(xT_matrix))
+
+ggplot(xT_df, aes(x = X, y = Y, fill = xT)) +
+  geom_tile() +
+  geom_text(aes(label = sprintf("%.2f", xT)), color = "white", size = 2.5) +
+  scale_fill_gradient(low = "darkgreen", high = "red") +
+  labs(title = "Matriz de Expected Threat (xT)",
+       x = "Posición X (→ Portería rival)",
+       y = "Posición Y (↑ Centro del campo)") +
+  theme_minimal()
+```
+
+***
+
+## 3. Calcular el xT de una Acción
+
+```{webr-r}
+# Funciones para calcular xT
+obtener_xT <- function(x, y, xT_matrix) {
+  # x: 0-105 (metros), y: 0-68 (metros)
+  x_idx <- min(ceiling(x / 105 * 12), 12)
+  y_idx <- min(ceiling(y / 68 * 8), 8)
+  xT_matrix[y_idx, x_idx]
+}
+
+calcular_xT_accion <- function(x_inicio, y_inicio, x_fin, y_fin, xT_matrix) {
+  xT_inicio <- obtener_xT(x_inicio, y_inicio, xT_matrix)
+  xT_fin <- obtener_xT(x_fin, y_fin, xT_matrix)
+  xT_fin - xT_inicio
+}
+
+# Ejemplo: Pase progresivo
+pase_ejemplo <- list(x_inicio = 52.5, y_inicio = 34, x_fin = 90, y_fin = 34)
+
+xT_pase <- calcular_xT_accion(
+  pase_ejemplo$x_inicio, pase_ejemplo$y_inicio,
+  pase_ejemplo$x_fin, pase_ejemplo$y_fin,
+  xT_matrix
+)
+
+cat("Pase desde (", pase_ejemplo$x_inicio, ",", pase_ejemplo$y_inicio, ") ",
+    "hacia (", pase_ejemplo$x_fin, ",", pase_ejemplo$y_fin, ")\n", sep = "")
+cat("xT Añadido:", round(xT_pase, 4), "\n")
+```
+
+***
+
+## 4. Aplicar xT a Datos de Eventos
+
+```{webr-r}
+# Simular 100 pases
+set.seed(42)
+pases <- tibble(
+  PaseID = 1:100,
+  Jugador = sample(c('García', 'López', 'Martínez', 'Sánchez'), 100, replace = TRUE),
+  Minuto = sample(1:90, 100),
+  X_Inicio = runif(100, 10, 80),
+  Y_Inicio = runif(100, 5, 63),
+  X_Fin = runif(100, 20, 100),
+  Y_Fin = runif(100, 5, 63),
+  Exitoso = sample(c(TRUE, FALSE), 100, replace = TRUE, prob = c(0.8, 0.2))
+)
+
+# Calcular xT para cada pase
+pases <- pases %>%
+  rowwise() %>%
+  mutate(
+    xT_Inicio = obtener_xT(X_Inicio, Y_Inicio, xT_matrix),
+    xT_Fin = obtener_xT(X_Fin, Y_Fin, xT_matrix),
+    xT_Añadido = xT_Fin - xT_Inicio,
+    xT_Efectivo = if_else(Exitoso, xT_Añadido, 0)
+  ) %>%
+  ungroup()
+
+pases %>%
+  select(Jugador, X_Inicio, X_Fin, xT_Añadido, Exitoso, xT_Efectivo) %>%
+  head()
+```
+
+***
+
+## 5. Ranking de Jugadores por xT
+
+```{webr-r}
+ranking_xT <- pases %>%
+  group_by(Jugador) %>%
+  summarise(
+    Pases_Totales = n(),
+    Pases_Exitosos = sum(Exitoso),
+    xT_Total = sum(xT_Efectivo),
+    xT_Medio = mean(xT_Añadido)
+  ) %>%
+  arrange(desc(xT_Total))
+
+cat("🏆 Ranking de Jugadores por xT Total:\n")
+print(ranking_xT)
+
+# Visualizar
+ggplot(ranking_xT, aes(x = reorder(Jugador, xT_Total), y = xT_Total, fill = Jugador)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Contribución Ofensiva por xT", x = "", y = "xT Total") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+***
+
+## 🏆 Mini-Proyecto: Analista de Pases
+
+### Pregunta 1: Los Mejores Pases
+¿Cuáles son los 5 pases con mayor xT añadido?
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+pases %>%
+  arrange(desc(xT_Añadido)) %>%
+  head(5) %>%
+  select(Jugador, Minuto, X_Inicio, X_Fin, xT_Añadido)
+```
+:::
+
+### Pregunta 2: xT por Zona del Campo
+Divide el campo en 3 zonas y calcula el xT medio desde cada una.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+pases %>%
+  mutate(Zona = case_when(
+    X_Inicio < 35 ~ "Defensa",
+    X_Inicio < 70 ~ "Medio",
+    TRUE ~ "Ataque"
+  )) %>%
+  group_by(Zona) %>%
+  summarise(xT_Medio = mean(xT_Añadido)) %>%
+  arrange(desc(xT_Medio))
+```
+:::
+
+---
+
+## Resumen
+
+| Concepto | Descripción |
+|----------|-------------|
+| **xG** | Probabilidad de marcar un tiro |
+| **xT** | Probabilidad de marcar desde una zona del campo |
+| **xT añadido** | Diferencia de xT entre posición final e inicial |

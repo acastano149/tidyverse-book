@@ -1,0 +1,217 @@
+# APIs de Datos: StatsBombR y worldfootballR
+
+Este capítulo enseña cómo acceder a datos de fútbol desde R usando paquetes especializados.
+
+::: {.callout-important}
+## Instalación
+Para usar estas APIs en tu entorno local, instala:
+```r
+# StatsBomb
+devtools::install_github("statsbomb/StatsBombR")
+
+# worldfootballR (FBref, Transfermarkt, etc.)
+install.packages("worldfootballR")
+```
+:::
+
+```{webr-r}
+library(tidyverse)
+
+# Simularemos datos similares a los que devuelven estas APIs
+# ya que en webR no podemos hacer llamadas HTTP externas
+
+# Datos tipo StatsBomb: Competiciones disponibles
+competiciones <- tibble(
+  competition_id = c(11, 43, 49, 72),
+  competition_name = c("La Liga", "FIFA World Cup", "FA Women's Super League", "Women's World Cup"),
+  country_name = c("Spain", "International", "England", "International"),
+  season_id = c(90, 106, 107, 107),
+  season_name = c("2020/2021", "2022", "2023/2024", "2023")
+)
+
+# Datos tipo StatsBomb: Partidos
+partidos <- tibble(
+  match_id = c(3773369, 3773370, 3773371),
+  match_date = as.Date(c("2022-11-20", "2022-11-21", "2022-11-22")),
+  home_team = c("Qatar", "England", "Argentina"),
+  away_team = c("Ecuador", "Iran", "Saudi Arabia"),
+  home_score = c(0, 6, 1),
+  away_score = c(2, 2, 2),
+  competition_id = c(43, 43, 43)
+)
+
+# Datos tipo StatsBomb: Eventos
+eventos <- tibble(
+  id = 1:20,
+  match_id = rep(3773369, 20),
+  minute = sample(1:90, 20),
+  type_name = sample(c("Pass", "Shot", "Dribble", "Tackle", "Clearance"), 20, replace = TRUE),
+  player_name = sample(c("Valencia", "Estrada", "Caicedo", "Méndez"), 20, replace = TRUE),
+  team_name = sample(c("Qatar", "Ecuador"), 20, replace = TRUE),
+  location_x = runif(20, 0, 120),
+  location_y = runif(20, 0, 80)
+)
+
+cat("✅ Datos simulados cargados\n")
+cat("   Competiciones:", nrow(competiciones), "\n")
+cat("   Partidos:", nrow(partidos), "\n")
+cat("   Eventos:", nrow(eventos), "\n")
+```
+
+***
+
+## 1. StatsBombR: Datos Gratuitos
+
+### Ejemplo 1.1: Explorar competiciones disponibles
+
+En tu entorno local con StatsBombR real:
+```r
+library(StatsBombR)
+competiciones <- FreeCompetitions()
+```
+
+Estructura de los datos:
+```{webr-r}
+competiciones
+```
+
+### Ejemplo 1.2: Obtener partidos de una competición
+
+```r
+# En entorno local:
+partidos <- FreeMatches(Competitions = competiciones %>% 
+                       filter(competition_id == 43))
+```
+
+```{webr-r}
+partidos
+```
+
+### Ejemplo 1.3: Obtener eventos de un partido
+
+```r
+# En entorno local:
+eventos <- get.matchFree(match_id = 3773369)
+# O para múltiples partidos:
+eventos <- StatsBombFreeEvents(MatchesDF = partidos)
+```
+
+```{webr-r}
+eventos %>% head(10)
+```
+
+---
+
+***
+
+## 2. Análisis de Eventos
+
+### Ejemplo 2.1: Distribución de acciones
+
+```{webr-r}
+eventos %>%
+  count(type_name, sort = TRUE) %>%
+  ggplot(aes(x = reorder(type_name, n), y = n, fill = type_name)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Distribución de Eventos", x = "", y = "Frecuencia") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+### Ejemplo 2.2: Eventos por jugador
+
+```{webr-r}
+eventos %>%
+  count(player_name, type_name) %>%
+  pivot_wider(names_from = type_name, values_from = n, values_fill = 0)
+```
+
+---
+
+***
+
+## 3. worldfootballR: Múltiples Fuentes
+
+worldfootballR permite acceder a:
+- **FBref**: Estadísticas avanzadas
+- **Transfermarkt**: Valores de mercado
+- **Understat**: xG
+
+### Ejemplo 3.1: Estructura típica de datos FBref
+
+```{webr-r}
+# Datos simulados tipo FBref
+estadisticas_jugadores <- tibble(
+  Jugador = c("Messi", "Haaland", "Mbappé", "Bellingham"),
+  Equipo = c("Inter Miami", "Man City", "Real Madrid", "Real Madrid"),
+  Goles = c(15, 27, 22, 12),
+  Asistencias = c(12, 5, 8, 10),
+  xG = c(12.5, 25.3, 20.1, 8.5),
+  xA = c(10.2, 4.8, 7.5, 8.2),
+  Minutos = c(1800, 2200, 2100, 1950)
+)
+
+estadisticas_jugadores %>%
+  mutate(
+    Goles_90 = Goles / (Minutos / 90),
+    xG_90 = xG / (Minutos / 90),
+    Sobrerendimiento = Goles - xG
+  ) %>%
+  arrange(desc(Sobrerendimiento))
+```
+
+---
+
+***
+
+## 🏆 Mini-Proyecto: Análisis de Partido
+
+### Pregunta 1: Posesión por Equipo
+Calcula el porcentaje de eventos (proxy de posesión) por equipo.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+eventos %>%
+  count(team_name) %>%
+  mutate(porcentaje = n / sum(n) * 100)
+```
+:::
+
+### Pregunta 2: Mapa de Eventos
+Visualiza la ubicación de los eventos en el campo.
+
+```{webr-r}
+# Escribe tu código aquí:
+
+
+```
+
+::: {.callout-tip collapse="true"}
+## Ver solución
+```r
+ggplot(eventos, aes(x = location_x, y = location_y, color = team_name)) +
+  geom_point(alpha = 0.6) +
+  coord_fixed(ratio = 80/120) +
+  labs(title = "Distribución de Eventos", x = "X", y = "Y") +
+  theme_minimal()
+```
+:::
+
+---
+
+## Resumen: APIs Disponibles
+
+| Paquete | Fuentes | Datos |
+|---------|---------|-------|
+| `StatsBombR` | StatsBomb Open Data | Eventos detallados, 360 data |
+| `worldfootballR` | FBref, Transfermarkt, Understat | Estadísticas, valores, xG |
+| `nflfastR` | NFL | Datos de fútbol americano |
+| `hoopR` | NBA | Datos de baloncesto |
